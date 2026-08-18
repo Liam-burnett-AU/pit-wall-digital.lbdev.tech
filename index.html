@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Team Login</title>
+<style>
+  :root {
+    --navy: #00295c;
+    --navy-deep: #001835;
+    --light-blue: #a3c1e7;
+    --yellow: #fbd708;
+    --white: #f4f7fb;
+    --panel-border: rgba(163, 193, 231, 0.18);
+    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--navy-deep);
+    color: var(--white);
+    font-family: var(--font-body);
+  }
+
+  body {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---------- Left panel: identity / signature element ---------- */
+  .panel {
+    position: relative;
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 85%);
+    padding: 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border-right: 1px solid var(--panel-border);
+  }
+
+  /* faint circuit-trace motif — subject-appropriate, quiet, not decoration for its own sake */
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--panel-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--panel-border) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity: 0.35;
+    mask-image: radial-gradient(circle at 30% 30%, black, transparent 70%);
+  }
+
+  .brand-block { z-index: 1; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--yellow);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .headline {
+    font-size: clamp(36px, 4.2vw, 54px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.5px;
+  }
+
+  .headline span { color: var(--light-blue); }
+
+  .sub {
+    margin-top: 20px;
+    max-width: 420px;
+    color: var(--light-blue);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* telemetry readout — signature element: a live-feeling status strip */
+  .status-strip {
+    z-index: 1;
+    display: flex;
+    gap: 28px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--light-blue);
+    border-top: 1px solid var(--panel-border);
+    padding-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  .status-strip .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--yellow);
+    display: inline-block;
+    margin-right: 7px;
+    box-shadow: 0 0 6px var(--yellow);
+  }
+
+  /* ---------- Right panel: form ---------- */
+  .form-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  .form-card {
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .tabs {
+    display: flex;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 32px;
+  }
+
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--light-blue);
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    font-family: var(--font-body);
+  }
+
+  .tab.active {
+    background: var(--yellow);
+    color: var(--navy-deep);
+  }
+
+  h1.form-title {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+
+  p.form-subtitle {
+    color: var(--light-blue);
+    font-size: 13.5px;
+    margin-bottom: 28px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+    color: var(--light-blue);
+    margin-bottom: 7px;
+    text-transform: uppercase;
+  }
+
+  .field input {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(163, 193, 231, 0.06);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field input:focus {
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 3px rgba(251, 215, 8, 0.15);
+  }
+
+  .field input::placeholder {
+    color: rgba(244, 247, 251, 0.32);
+  }
+
+  .field select {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(163, 193, 231, 0.06);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field select:focus {
+    border-color: var(--yellow);
+    box-shadow: 0 0 0 3px rgba(251, 215, 8, 0.15);
+  }
+
+  .field select option {
+    background: var(--navy-deep);
+    color: var(--white);
+  }
+
+  .field input[readonly] {
+    color: var(--light-blue);
+    cursor: default;
+  }
+
+  .field input[disabled],
+  .field select[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .lookup-status {
+    margin-top: 7px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--light-blue);
+    min-height: 14px;
+  }
+
+  .lookup-status.error { color: #ffb4b4; }
+  .lookup-status.success { color: var(--yellow); }
+
+  .results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    margin-top: 4px;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .results-dropdown.open { display: block; }
+
+  .result-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--panel-border);
+    transition: background 0.12s ease;
+  }
+
+  .result-item:last-child { border-bottom: none; }
+
+  .result-item:hover,
+  .result-item.highlighted {
+    background: rgba(251, 215, 8, 0.1);
+  }
+
+  .result-number {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--yellow);
+    white-space: nowrap;
+  }
+
+  .result-name {
+    font-size: 13px;
+    color: var(--white);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-empty {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--light-blue);
+    font-family: var(--font-mono);
+  }
+
+  .row-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 13px 0;
+    margin-top: 8px;
+    background: var(--yellow);
+    color: var(--navy-deep);
+    border: none;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.05s ease;
+    font-family: var(--font-body);
+  }
+
+  .submit-btn:hover { filter: brightness(1.08); }
+  .submit-btn:active { transform: translateY(1px); }
+  .submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .msg {
+    margin-top: 16px;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    padding: 10px 12px;
+    border-radius: 6px;
+    display: none;
+  }
+
+  .msg.error {
+    display: block;
+    color: #ffb4b4;
+    background: rgba(255, 90, 90, 0.1);
+    border: 1px solid rgba(255, 90, 90, 0.3);
+  }
+
+  .msg.success {
+    display: block;
+    color: #b8f0c9;
+    background: rgba(90, 255, 140, 0.08);
+    border: 1px solid rgba(90, 255, 140, 0.25);
+  }
+
+  .hidden { display: none; }
+
+  .fine-print {
+    margin-top: 22px;
+    font-size: 12px;
+    color: rgba(163, 193, 231, 0.65);
+    text-align: center;
+  }
+
+  @media (max-width: 860px) {
+    body { grid-template-columns: 1fr; }
+    .panel { padding: 36px 28px; min-height: 260px; }
+    .status-strip { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- LEFT: identity panel -->
+  <div class="panel">
+    <div class="brand-block">
+      <div class="eyebrow">Pit Wall // Team Access</div>
+      <h1 class="headline">Know your robot.<br><span>Know the comp.</span></h1>
+      <p class="sub">
+        Sign in to your team account to log robot specs, review match context,
+        and ask questions before you're up on the field.
+      </p>
+    </div>
+
+    <div class="status-strip">
+      <span><span class="dot"></span>AUTH: FIREBASE</span>
+      <span>COMP: FTC / FRC</span>
+      <span>BUILD: ASSESSMENT DEMO</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: form panel -->
+  <div class="form-panel">
+    <div class="form-card">
+
+      <div class="tabs">
+        <button class="tab active" id="tabLogin" onclick="setMode('login')">Log In</button>
+        <button class="tab" id="tabSignup" onclick="setMode('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="loginForm">
+        <h1 class="form-title">Welcome back</h1>
+        <p class="form-subtitle">Log in with your team's account details.</p>
+
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="team@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="submit-btn" id="loginBtn" onclick="handleLogin()">Log In</button>
+        <div class="msg" id="loginMsg"></div>
+      </div>
+
+      <!-- SIGNUP FORM -->
+      <div id="signupForm" class="hidden">
+        <h1 class="form-title">Create team account</h1>
+        <p class="form-subtitle">Set up access for your robotics team.</p>
+
+        <div class="field">
+          <label for="signupCompetition">Competition</label>
+          <select id="signupCompetition" onchange="handleCompetitionChange()">
+            <option value="FTC">FTC</option>
+            <option value="FRC">FRC</option>
+          </select>
+        </div>
+
+        <div class="field" style="position: relative;">
+          <label for="signupTeamNumber">Team number</label>
+          <input type="text" id="signupTeamNumber" placeholder="Start typing a team number..." inputmode="numeric" autocomplete="off" oninput="onTeamSearchInput()">
+          <div class="lookup-status" id="lookupStatus"></div>
+          <div class="results-dropdown" id="resultsDropdown"></div>
+        </div>
+
+        <div class="field">
+          <label for="signupTeamName">Team name</label>
+          <input type="text" id="signupTeamName" placeholder="Select a team from the list above" readonly>
+        </div>
+
+        <div class="msg error" id="frcNotice" style="display:none;">
+          FRC support isn't built yet — this project is FTC-only for now. Switch the dropdown back to FTC to sign up.
+        </div>
+
+        <div class="field">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="team@example.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" placeholder="At least 6 characters" autocomplete="new-password">
+        </div>
+
+        <button class="submit-btn" id="signupBtn" onclick="handleSignup()">Create Account</button>
+        <div class="msg" id="signupMsg"></div>
+      </div>
+
+      <p class="fine-print">Assessment build — Sheldon College Digital Technologies, Term 2 2026</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    // TODO: replace with your actual Firebase project config
+    // (this config is safe to be public — Firestore security rules do the
+    // real access control, not this object)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
+      authDomain: "lb-dev-2444f.firebaseapp.com",
+      projectId: "lb-dev-2444f",
+      storageBucket: "lb-dev-2444f.firebasestorage.app",
+      messagingSenderId: "262360112421",
+      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ---------- tab switching ----------
+    window.setMode = function (mode) {
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const tabLogin = document.getElementById('tabLogin');
+      const tabSignup = document.getElementById('tabSignup');
+
+      if (mode === 'login') {
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+      } else {
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+        tabSignup.classList.add('active');
+        tabLogin.classList.remove('active');
+      }
+    };
+
+    function showMsg(el, text, type) {
+      el.textContent = text;
+      el.className = 'msg ' + type;
+    }
+
+    // ---------- competition dropdown (FRC disabled for now) ----------
+    window.handleCompetitionChange = function () {
+      const comp = document.getElementById('signupCompetition').value;
+      const numberInput = document.getElementById('signupTeamNumber');
+      const nameInput = document.getElementById('signupTeamName');
+      const frcNotice = document.getElementById('frcNotice');
+      const signupBtn = document.getElementById('signupBtn');
+      const lookupStatus = document.getElementById('lookupStatus');
+
+      if (comp === 'FRC') {
+        numberInput.disabled = true;
+        nameInput.disabled = true;
+        signupBtn.disabled = true;
+        frcNotice.style.display = 'block';
+        lookupStatus.textContent = '';
+        document.getElementById('resultsDropdown').classList.remove('open');
+      } else {
+        numberInput.disabled = false;
+        nameInput.disabled = false;
+        signupBtn.disabled = false;
+        frcNotice.style.display = 'none';
+      }
+    };
+
+    // ---------- FTCScout live search: shows up to 5 matching teams ----------
+    let searchDebounceTimer = null;
+
+    window.onTeamSearchInput = function () {
+      const dropdown = document.getElementById('resultsDropdown');
+      const lookupStatus = document.getElementById('lookupStatus');
+      const nameField = document.getElementById('signupTeamName');
+
+      // typing again invalidates whatever was previously selected
+      nameField.value = '';
+      lookupStatus.textContent = '';
+      lookupStatus.className = 'lookup-status';
+
+      clearTimeout(searchDebounceTimer);
+
+      const query = document.getElementById('signupTeamNumber').value.trim();
+      if (!query) {
+        dropdown.classList.remove('open');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      searchDebounceTimer = setTimeout(() => runTeamSearch(query), 300);
+    };
+
+    async function runTeamSearch(query) {
+      const dropdown = document.getElementById('resultsDropdown');
+      const lookupStatus = document.getElementById('lookupStatus');
+
+      lookupStatus.textContent = 'Searching...';
+
+      try {
+        const res = await fetch(
+          `https://api.ftcscout.org/rest/v1/teams/search?searchText=${encodeURIComponent(query)}&limit=5`
+        );
+        if (!res.ok) throw new Error('Search failed (' + res.status + ')');
+
+        const teams = await res.json();
+        renderResults(teams);
+        lookupStatus.textContent = teams.length
+          ? `${teams.length} match${teams.length === 1 ? '' : 'es'} found`
+          : '';
+      } catch (err) {
+        dropdown.innerHTML = '';
+        dropdown.classList.remove('open');
+        lookupStatus.textContent = 'Couldn\'t reach the FTC team database. You can type the name manually.';
+        lookupStatus.className = 'lookup-status error';
+        document.getElementById('signupTeamName').readOnly = false;
+      }
+    }
+
+    function renderResults(teams) {
+      const dropdown = document.getElementById('resultsDropdown');
+      dropdown.innerHTML = '';
+
+      if (!teams || teams.length === 0) {
+        dropdown.innerHTML = '<div class="result-empty">No matching FTC teams found.</div>';
+        dropdown.classList.add('open');
+        return;
+      }
+
+      teams.slice(0, 5).forEach((team) => {
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        item.innerHTML = `
+          <span class="result-number">#${team.number}</span>
+          <span class="result-name">${escapeHtml(team.name || 'Unnamed team')}</span>
+        `;
+        item.addEventListener('click', () => selectTeam(team));
+        dropdown.appendChild(item);
+      });
+
+      dropdown.classList.add('open');
+    }
+
+    function selectTeam(team) {
+      document.getElementById('signupTeamNumber').value = team.number;
+      document.getElementById('signupTeamName').value = team.name || '';
+      document.getElementById('resultsDropdown').classList.remove('open');
+      document.getElementById('lookupStatus').textContent = `Selected: #${team.number} — ${team.name || 'Unnamed team'}`;
+      document.getElementById('lookupStatus').className = 'lookup-status success';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // close dropdown when clicking elsewhere on the page
+    document.addEventListener('click', (e) => {
+      const wrapper = document.getElementById('signupTeamNumber');
+      const dropdown = document.getElementById('resultsDropdown');
+      if (wrapper && dropdown && !wrapper.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    });
+
+    // ---------- login ----------
+    window.handleLogin = async function () {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('loginBtn');
+      const msg = document.getElementById('loginMsg');
+
+      if (!email || !password) {
+        showMsg(msg, 'Enter both an email and password.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Logging in...';
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMsg(msg, 'Logged in. Redirecting to dashboard...', 'success');
+        // TODO: redirect once dashboard.html exists
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showMsg(msg, friendlyError(err), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Log In';
+      }
+    };
+
+    // ---------- signup ----------
+    window.handleSignup = async function () {
+      const teamName = document.getElementById('signupTeamName').value.trim();
+      const teamNumber = document.getElementById('signupTeamNumber').value.trim();
+      const competition = document.getElementById('signupCompetition').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const btn = document.getElementById('signupBtn');
+      const msg = document.getElementById('signupMsg');
+
+      if (competition === 'FRC') {
+        showMsg(msg, 'FRC support isn\'t built yet — switch to FTC to sign up.', 'error');
+        return;
+      }
+      if (!teamName || !teamNumber || !email || !password) {
+        showMsg(msg, 'Fill in team number (so the name can be looked up), email and password.', 'error');
+        return;
+      }
+      if (password.length < 6) {
+        showMsg(msg, 'Password needs to be at least 6 characters.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Creating account...';
+
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+        // Create the team's Firestore doc, keyed by their Auth UID
+        await setDoc(doc(db, 'teams', cred.user.uid), {
+          teamName,
+          teamNumber,
+          competition: competition || 'FTC',
+          createdAt: new Date().toISOString()
+        });
+
+        showMsg(msg, 'Account created. Redirecting to dashboard...', 'success');
+        // TODO: redirect once dashboard.html exists
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showMsg(msg, friendlyError(err), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    };
+
+    function friendlyError(err) {
+      console.error('Auth error:', err);
+      const code = err && err.code;
+
+      switch (code) {
+        case 'auth/email-already-in-use':
+          return 'That email already has an account. Try logging in instead.';
+        case 'auth/invalid-email':
+          return 'That email address doesn\'t look right.';
+        case 'auth/weak-password':
+          return 'Password is too weak — use at least 6 characters.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          return 'Email or password is incorrect.';
+        case 'auth/invalid-api-key':
+        case 'auth/api-key-not-valid':
+          return 'Firebase config looks wrong — check the apiKey in firebaseConfig.';
+        case 'auth/network-request-failed':
+          return 'Network error — check your connection and Firebase config (authDomain in particular).';
+        default:
+          // No recognisable Firebase code — most likely the firebaseConfig
+          // placeholders haven't been replaced yet, causing a raw network
+          // failure instead of a proper Firebase error. Check the console.
+          return code
+            ? `Something went wrong (${code}). Try again.`
+            : `Something went wrong: ${ (err && err.message) || 'unknown error' }. Check that your Firebase config in index.html has been replaced with your real project values, and check the browser console for details.`;
+      }
+    }
+  </script>
+
+</body>
+</html>

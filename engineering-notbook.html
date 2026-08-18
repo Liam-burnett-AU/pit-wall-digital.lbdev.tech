@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Engineering Notebook</title>
+<style>
+  :root {
+    --navy: #00295c;
+    --navy-deep: #001835;
+    --light-blue: #a3c1e7;
+    --yellow: #fbd708;
+    --white: #f4f7fb;
+    --red: #ff6b6b;
+    --panel-border: rgba(163, 193, 231, 0.18);
+    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    background: var(--navy-deep);
+    color: var(--white);
+    font-family: var(--font-body);
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 12px;
+    column-gap: 20px;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--navy);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: wrap; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--yellow);
+    text-transform: uppercase;
+  }
+  .main-nav { display: flex; align-items: center; gap: 4px; overflow-x: auto; }
+  .main-nav a {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--light-blue);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
+  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+
+  .team-chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--light-blue);
+    border: 1px solid var(--panel-border);
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+
+  main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .loading-state, .error-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--light-blue);
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+  .error-state a { color: var(--yellow); }
+  .hidden { display: none !important; }
+
+  .page-head { margin-bottom: 28px; }
+  .page-head h1 { font-size: clamp(26px, 3vw, 32px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .page-head p { color: var(--light-blue); font-size: 14px; line-height: 1.6; }
+
+  .form-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+  .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+    color: var(--light-blue);
+    margin-bottom: 7px;
+    text-transform: uppercase;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    padding: 11px 13px;
+    background: rgba(163, 193, 231, 0.06);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    resize: vertical;
+  }
+  .field textarea { min-height: 90px; }
+  .field input:focus, .field textarea:focus { border-color: var(--yellow); }
+  .field .hint { font-size: 12px; color: rgba(163,193,231,0.65); margin-top: 6px; }
+
+  .btn {
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-body);
+    border: none;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+  }
+  .btn-primary { background: var(--yellow); color: var(--navy-deep); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--light-blue);
+    padding: 7px 14px;
+    font-size: 12.5px;
+  }
+  .btn-outline:hover { border-color: var(--red); color: var(--red); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status-msg { margin-top: 12px; font-size: 12.5px; font-family: var(--font-mono); display: none; }
+  .status-msg.success { display: block; color: var(--yellow); }
+  .status-msg.error { display: block; color: var(--red); }
+
+  .entries-section {
+    margin-bottom: 44px;
+  }
+  .entries-section:last-child {
+    margin-bottom: 0;
+  }
+  .entries-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .entries-empty {
+    text-align: center;
+    color: var(--light-blue);
+    font-size: 13.5px;
+    padding: 30px 0;
+    border: 1px dashed var(--panel-border);
+    border-radius: 12px;
+  }
+
+  .entry-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .entry-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .entry-title { font-size: 15px; font-weight: 700; }
+  .entry-date { font-family: var(--font-mono); font-size: 11.5px; color: var(--light-blue); margin-top: 3px; }
+
+  .entry-section { margin-top: 12px; }
+  .entry-section .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--light-blue);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .entry-section .body { font-size: 13.5px; white-space: pre-wrap; line-height: 1.5; }
+
+  .ai-feedback {
+    margin-top: 14px;
+    background: rgba(251, 215, 8, 0.06);
+    border: 1px solid rgba(251, 215, 8, 0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .ai-feedback .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .ai-feedback .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+  .ai-feedback .body { font-size: 13px; line-height: 1.55; }
+  .ai-feedback.loading .body { color: var(--light-blue); font-family: var(--font-mono); font-size: 12.5px; }
+
+  .ai-feedback .body strong,
+  .photo-feedback strong { color: var(--yellow); font-weight: 700; }
+  .ai-feedback .body ul,
+  .ai-feedback .body ol,
+  .photo-feedback ul,
+  .photo-feedback ol { margin: 6px 0 6px 20px; }
+  .ai-feedback .body p,
+  .photo-feedback p { margin: 0 0 8px; }
+  .ai-feedback .body p:last-child,
+  .photo-feedback p:last-child { margin-bottom: 0; }
+  .ai-feedback .body code,
+  .photo-feedback code {
+    font-family: var(--font-mono);
+    background: rgba(163, 193, 231, 0.12);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.92em;
+  }
+
+  .photo-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .photo-card img { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .photo-card-body { padding: 10px 12px; }
+  .photo-card .photo-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .photo-card .btn-outline { font-size: 11px; padding: 5px 10px; }
+  .photo-feedback { font-size: 12px; line-height: 1.5; margin-top: 8px; color: var(--light-blue); }
+  .photo-feedback.ready { color: var(--white); }
+
+  .final-doc-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .final-doc-card .filename { font-family: var(--font-mono); font-size: 13px; color: var(--yellow); margin-bottom: 10px; }
+  .final-doc-card a { color: var(--yellow); }
+
+  .upload-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .upload-row input[type="file"] {
+    color: var(--light-blue);
+    font-size: 13px;
+    max-width: 100%;
+  }
+  .upload-row input[type="file"]::file-selector-button {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--light-blue);
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    margin-right: 12px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .upload-row input[type="file"]::file-selector-button:hover {
+    border-color: var(--yellow);
+    color: var(--yellow);
+  }
+
+  .upload-section p.section-desc {
+    color: var(--light-blue);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+
+  .final-doc-wrap { margin-top: 20px; }
+
+  /* ---------- feedback modal / lightbox ---------- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 6, 20, 0.82);
+    backdrop-filter: blur(2px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .modal-panel {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(163, 193, 231, 0.1);
+    border: 1px solid var(--panel-border);
+    color: var(--light-blue);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .modal-close:hover { color: var(--yellow); border-color: var(--yellow); }
+
+  .modal-img {
+    width: 100%;
+    max-height: 42vh;
+    object-fit: contain;
+    border-radius: 10px;
+    background: var(--navy-deep);
+    margin-bottom: 18px;
+  }
+
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; padding-right: 40px; }
+  .modal-subtitle { font-family: var(--font-mono); font-size: 12px; color: var(--light-blue); margin-bottom: 18px; }
+
+  .modal-section { margin-bottom: 16px; }
+  .modal-section .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--light-blue);
+    display: block;
+    margin-bottom: 5px;
+  }
+  .modal-section .body { font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+
+  .modal-feedback {
+    background: rgba(251, 215, 8, 0.06);
+    border: 1px solid rgba(251, 215, 8, 0.25);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 6px;
+  }
+  .modal-feedback .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .modal-feedback .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+  .modal-feedback .body { font-size: 14px; line-height: 1.6; }
+  .modal-feedback .body strong { color: var(--yellow); font-weight: 700; }
+  .modal-feedback .body p { margin: 0 0 10px; }
+  .modal-feedback .body p:last-child { margin-bottom: 0; }
+  .modal-feedback .body ul, .modal-feedback .body ol { margin: 6px 0 6px 20px; }
+  .modal-feedback.loading .body { color: var(--light-blue); font-family: var(--font-mono); font-size: 13px; }
+
+  .thumb-btn {
+    width: 100%;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+  }
+  .thumb-btn img { width: 100%; height: 150px; object-fit: cover; display: block; }
+
+  .entry-card { cursor: pointer; transition: border-color 0.15s ease; }
+  .entry-card:hover { border-color: var(--yellow); }
+
+  #toastContainer {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+  }
+  .toast {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--white);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 220px;
+    max-width: 340px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.toast-success { border-left-color: var(--yellow); }
+  .toast.toast-error { border-left-color: #ff6b6b; }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
+    background-size: 400% 100%;
+    animation: skeleton-pulse 1.4s ease infinite;
+    border-radius: 6px;
+  }
+  @keyframes skeleton-pulse { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+  .skeleton-block { height: 14px; margin-bottom: 10px; }
+  .skeleton-block.w-40 { width: 40%; }
+  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 14px 18px; }
+    main { padding: 32px 18px 60px; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <div id="modalOverlay" class="modal-overlay hidden" onclick="if(event.target===this) closeModal()">
+    <div class="modal-panel">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="eyebrow">Pit Wall // Notebook</span>
+      <nav class="main-nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="robot-profile.html">Robot</a>
+        <a href="scouting.html">Scouting</a>
+        <a href="schedule.html">Schedule</a>
+        <a href="chat.html">AI Chat</a>
+        <a href="engineering-notebook.html" class="active">Notebook</a>
+        <a href="pit-checklist.html">Checklist</a>
+        <a href="settings.html">Settings</a>
+      </nav>
+    </div>
+    <span class="team-chip" id="teamChip">—</span>
+  </div>
+
+  <main>
+    <div class="loading-state" id="loadingState">
+      <div style="max-width:420px; margin:0 auto; text-align:left;">
+        <div class="skeleton skeleton-block w-40"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+    </div>
+
+    <div class="error-state hidden" id="errorState">
+      <p id="errorMessage">Something went wrong.</p>
+      <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+    </div>
+
+    <div id="pageContent" class="hidden">
+      <div class="page-head">
+        <h1>Engineering Notebook</h1>
+        <p>Log what your team did each session. Judges use this for most awards, and the AI reads it too — plus you'll get instant feedback on each entry.</p>
+      </div>
+
+      <div class="form-card">
+        <h2>New Entry</h2>
+
+        <div class="form-row">
+          <div class="field">
+            <label for="entryDate">Date</label>
+            <input type="date" id="entryDate">
+          </div>
+          <div class="field">
+            <label for="entryTitle">Title</label>
+            <input type="text" id="entryTitle" placeholder="e.g. Intake redesign, week 4">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="entryTask">What we did</label>
+          <textarea id="entryTask" placeholder="What did the team work on this session? Be specific — decisions made, problems hit, who did what..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="entryReflection">Reflection / discoveries</label>
+          <textarea id="entryReflection" placeholder="What did you learn? What would you do differently? What's next?"></textarea>
+          <div class="hint">This is the part judges care about most — show your thinking, not just what you built.</div>
+        </div>
+
+        <button class="btn btn-primary" id="saveEntryBtn" onclick="saveEntry()">Save & Get Feedback</button>
+        <div class="status-msg" id="entryStatus"></div>
+      </div>
+
+      <div class="entries-section">
+        <h2>Past Entries</h2>
+        <div id="entriesList"></div>
+      </div>
+
+      <div class="entries-section upload-section">
+        <h2>Notebook Page Photos</h2>
+        <p class="section-desc">Photograph physical notebook pages here. Each photo can get its own AI feedback.</p>
+        <div class="form-card">
+          <div class="upload-row">
+            <input type="file" id="photoInput" accept="image/*" multiple>
+            <button class="btn btn-primary" id="uploadPhotoBtn" onclick="uploadPhotos()">Upload Photo(s)</button>
+          </div>
+          <div class="status-msg" id="photoStatus"></div>
+        </div>
+        <div id="photosGrid" class="photos-grid"></div>
+      </div>
+
+      <div class="entries-section upload-section">
+        <h2>Final Notebook Upload</h2>
+        <p class="section-desc">Upload the final PDF or Word version of your notebook for a holistic AI review before you submit it for judging.</p>
+        <div class="form-card">
+          <div class="upload-row">
+            <input type="file" id="finalDocInput" accept=".pdf,.doc,.docx">
+            <button class="btn btn-primary" id="uploadFinalBtn" onclick="uploadFinalDoc()">Upload & Review</button>
+          </div>
+          <div class="status-msg" id="finalDocStatus"></div>
+        </div>
+        <div id="finalDocCard" class="final-doc-wrap"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Text extraction libraries for the final notebook document upload -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.7.2/mammoth.browser.min.js"></script>
+
+  <!-- Markdown rendering for AI feedback (same as chat.html) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    // TODO: replace with your actual Firebase project config (same as your other pages)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
+      authDomain: "lb-dev-2444f.firebaseapp.com",
+      projectId: "lb-dev-2444f",
+      storageBucket: "lb-dev-2444f.firebasestorage.app",
+      messagingSenderId: "262360112421",
+      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
+    };
+
+    // Calls Groq through a Cloudflare Worker proxy — same setup as chat.html.
+    // Calls Groq through a Cloudflare Worker proxy — same setup as
+    // chat.html. The Groq API key lives as a Worker secret, never here.
+    const GROQ_MODEL = "openai/gpt-oss-120b";
+    // Vision model for photo feedback — Groq's stable current vision model
+    // (Llama 4 Scout/Maverick were deprecated in early-mid 2026 in favour of this).
+    // Check console.groq.com/docs/models if this ever stops working.
+    const VISION_MODEL = "qwen/qwen3.6-27b";
+
+    // TODO: replace with your deployed Worker URL (same Worker as chat.html uses)
+    const GROQ_PROXY_URL = "https://groq-proxy.liamburnett40.workers.dev";
+
+    async function callGroq(messages, model) {
+      const res = await fetch(GROQ_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, model: model || GROQ_MODEL })
+      });
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        let errMsg = `Worker returned status ${res.status}`;
+        try { errMsg = JSON.parse(errBody).error || errMsg; } catch (e) {}
+        throw new Error(errMsg);
+      }
+      return res.json();
+    }
+
+    // Cloudinary — free file storage, no card needed (Firebase Storage now
+    // requires the paid Blaze plan). Files upload straight from the browser
+    // to Cloudinary using an "unsigned upload preset" — no backend needed.
+    // TODO: replace with your real Cloudinary cloud name + unsigned preset name.
+    // Get these from cloudinary.com (free signup) → Dashboard (cloud name) and
+    // Settings → Upload → Add upload preset → Signing Mode: Unsigned.
+    const CLOUDINARY_CLOUD_NAME = "dmht3gpl";
+    const CLOUDINARY_UPLOAD_PRESET = "LB Dev";
+
+    async function uploadToCloudinary(file, resourceType) {
+      const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+      const res = await fetch(url, { method: 'POST', body: formData });
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`Cloudinary upload failed (${res.status}): ${errBody}`);
+      }
+      const data = await res.json();
+      return data.secure_url;
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUid = null;
+    let teamContext = null;
+    let currentModalEntryId = null;
+    let currentModalPhotoId = null;
+
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const pageContent = document.getElementById('pageContent');
+
+    function showError(msg) {
+      loadingState.classList.add('hidden');
+      pageContent.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorState.classList.remove('hidden');
+    }
+
+    // default the date field to today
+    document.getElementById('entryDate').value = new Date().toISOString().slice(0, 10);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUid = user.uid;
+
+      try {
+        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        if (!teamSnap.exists()) {
+          showError('No team profile found for this account.');
+          return;
+        }
+        teamContext = teamSnap.data();
+        document.getElementById('teamChip').textContent = `#${teamContext.teamNumber || '—'} ${teamContext.competition || 'FTC'}`;
+
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+
+        await loadEntries();
+        await loadPhotos();
+        await renderFinalDoc();
+
+      } catch (err) {
+        console.error(err);
+        showError('Couldn\'t load your notebook. Check your connection and try again.');
+      }
+    });
+
+    // ---------- save entry + get instant AI feedback ----------
+    window.saveEntry = async function () {
+      const date = document.getElementById('entryDate').value;
+      const title = document.getElementById('entryTitle').value.trim();
+      const task = document.getElementById('entryTask').value.trim();
+      const reflection = document.getElementById('entryReflection').value.trim();
+
+      const btn = document.getElementById('saveEntryBtn');
+      const status = document.getElementById('entryStatus');
+
+      if (!date || !title || !task) {
+        status.textContent = 'Fill in at least the date, title, and what you did.';
+        status.className = 'status-msg error';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const docRef = await addDoc(collection(db, 'engineeringNotebook', currentUid, 'entries'), {
+          date, title, task, reflection,
+          aiFeedback: null,
+          createdAt: new Date().toISOString()
+        });
+
+        status.textContent = 'Entry saved. Getting feedback...';
+        status.className = 'status-msg success';
+        showToast('Entry saved.', 'success');
+
+        // clear form
+        document.getElementById('entryTitle').value = '';
+        document.getElementById('entryTask').value = '';
+        document.getElementById('entryReflection').value = '';
+
+        await loadEntries();
+        await getFeedbackForEntry(docRef.id, { date, title, task, reflection });
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Couldn\'t save — check your connection and try again.';
+        status.className = 'status-msg error';
+        showToast('Couldn\'t save entry.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save & Get Feedback';
+      }
+    };
+
+    // ---------- request AI feedback for a specific entry, right after saving ----------
+    async function getFeedbackForEntry(entryId, entry) {
+      const systemPrompt = `You are reviewing a FIRST Tech Challenge engineering notebook entry, the kind judges use for award evaluation. Give brief, specific, encouraging feedback (3-5 sentences max) on this entry: is the engineering process clear, is there genuine reflection (not just "we built X"), and one concrete suggestion to make it stronger for judging. Be direct and practical, not generic praise.`;
+
+      const userPrompt = `Date: ${entry.date}\nTitle: ${entry.title}\nWhat we did: ${entry.task}\nReflection: ${entry.reflection || '(none written)'}`;
+
+      try {
+        const data = await callGroq([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]);
+        const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
+
+        await updateDoc(doc(db, 'engineeringNotebook', currentUid, 'entries', entryId), { aiFeedback: feedback });
+        await loadEntries();
+
+        // if this entry's modal happens to be open right now, refresh it live
+        if (currentModalEntryId === entryId) {
+          openEntryModal(entryId, { ...entry, aiFeedback: feedback });
+        }
+
+      } catch (err) {
+        console.error('Feedback error:', err);
+        showToast('Couldn\'t get feedback for that entry.', 'error');
+      }
+    }
+
+    // ---------- load + render entries ----------
+    async function loadEntries() {
+      const list = document.getElementById('entriesList');
+      try {
+        const q = query(collection(db, 'engineeringNotebook', currentUid, 'entries'), orderBy('date', 'desc'));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          list.innerHTML = '<div class="entries-empty">No entries yet — log your first session above.</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        snap.forEach((docSnap) => {
+          const e = docSnap.data();
+          const card = document.createElement('div');
+          card.className = 'entry-card';
+          card.innerHTML = `
+            <div class="entry-head">
+              <div>
+                <div class="entry-title">${escapeHtml(e.title)}</div>
+                <div class="entry-date">${escapeHtml(e.date)}${e.aiFeedback ? ' · AI feedback ready' : ' · Getting feedback...'}</div>
+              </div>
+              <button class="btn btn-outline" data-action="delete">Delete</button>
+            </div>
+            <div class="entry-section">
+              <span class="label">What we did</span>
+              <div class="body">${escapeHtml(truncate(e.task, 140))}</div>
+            </div>
+          `;
+          card.addEventListener('click', (ev) => {
+            if (ev.target.closest('[data-action="delete"]')) return;
+            openEntryModal(docSnap.id, e);
+          });
+          card.querySelector('[data-action="delete"]').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            deleteEntry(docSnap.id);
+          });
+          list.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        list.innerHTML = '<div class="entries-empty">Couldn\'t load entries — check your connection and try again.</div>';
+      }
+    }
+
+    async function deleteEntry(entryId) {
+      if (!confirm('Delete this notebook entry? This can\'t be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'engineeringNotebook', currentUid, 'entries', entryId));
+        showToast('Entry deleted.', 'success');
+        await loadEntries();
+      } catch (err) {
+        console.error(err);
+        showToast('Couldn\'t delete entry.', 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // renders AI feedback as Markdown (bold, lists, etc.) instead of raw # and * characters
+    function renderMarkdown(text) {
+      if (!text) return '';
+      if (!window.marked || !window.DOMPurify) {
+        return escapeHtml(text); // fallback if the libraries failed to load
+      }
+      const rawHtml = window.marked.parse(text, { breaks: true });
+      return window.DOMPurify.sanitize(rawHtml);
+    }
+
+    function truncate(str, max) {
+      if (!str) return '';
+      return str.length > max ? str.slice(0, max).trim() + '…' : str;
+    }
+
+    // ==================== SHARED MODAL ====================
+
+    window.closeModal = function () {
+      document.getElementById('modalOverlay').classList.add('hidden');
+      currentModalEntryId = null;
+      currentModalPhotoId = null;
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    window.openEntryModal = function (entryId, e) {
+      currentModalEntryId = entryId;
+      currentModalPhotoId = null;
+
+      const feedbackBlock = e.aiFeedback
+        ? `<div class="modal-feedback">
+             <span class="label"><span class="dot"></span>AI Feedback</span>
+             <div class="body">${renderMarkdown(e.aiFeedback)}</div>
+           </div>`
+        : `<div class="modal-feedback loading">
+             <span class="label"><span class="dot"></span>AI Feedback</span>
+             <div class="body">Still generating feedback for this entry...</div>
+           </div>`;
+
+      document.getElementById('modalBody').innerHTML = `
+        <div class="modal-title">${escapeHtml(e.title)}</div>
+        <div class="modal-subtitle">${escapeHtml(e.date)}</div>
+        <div class="modal-section">
+          <span class="label">What we did</span>
+          <div class="body">${escapeHtml(e.task)}</div>
+        </div>
+        ${e.reflection ? `
+        <div class="modal-section">
+          <span class="label">Reflection</span>
+          <div class="body">${escapeHtml(e.reflection)}</div>
+        </div>` : ''}
+        ${feedbackBlock}
+      `;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+    };
+
+    window.openPhotoModal = function (photoId, p) {
+      currentModalPhotoId = photoId;
+      currentModalEntryId = null;
+
+      const hasFeedback = !!p.aiFeedback;
+      const feedbackBlock = hasFeedback
+        ? `<div class="modal-feedback">
+             <span class="label"><span class="dot"></span>AI Feedback</span>
+             <div class="body">${renderMarkdown(p.aiFeedback)}</div>
+           </div>`
+        : `<div class="modal-feedback loading" id="modalPhotoFeedback">
+             <span class="label"><span class="dot"></span>AI Feedback</span>
+             <div class="body">No feedback yet.</div>
+           </div>
+           <button class="btn btn-primary" id="modalGetFeedbackBtn" style="margin-top:12px;">Get AI Feedback</button>`;
+
+      document.getElementById('modalBody').innerHTML = `
+        <img class="modal-img" src="${p.url}" alt="${escapeHtml(p.filename)}">
+        <div class="modal-title">${escapeHtml(p.filename)}</div>
+        ${feedbackBlock}
+      `;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+
+      if (!hasFeedback) {
+        const btn = document.getElementById('modalGetFeedbackBtn');
+        if (btn) btn.addEventListener('click', () => getPhotoFeedback(photoId, p));
+      }
+    };
+
+    // ==================== PAGE PHOTOS ====================
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result); // data:image/...;base64,....
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.uploadPhotos = async function () {
+      const input = document.getElementById('photoInput');
+      const files = Array.from(input.files || []);
+      const status = document.getElementById('photoStatus');
+      const btn = document.getElementById('uploadPhotoBtn');
+
+      if (files.length === 0) {
+        status.textContent = 'Choose at least one image first.';
+        status.className = 'status-msg error';
+        return;
+      }
+
+      const MAX_SIZE = 10 * 1024 * 1024; // Cloudinary free-tier limit: 10MB per file
+      const tooBig = files.find(f => f.size > MAX_SIZE);
+      if (tooBig) {
+        const sizeMb = (tooBig.size / (1024 * 1024)).toFixed(1);
+        status.textContent = `"${tooBig.name}" is ${sizeMb}MB — Cloudinary's free tier caps uploads at 10MB. Most phone camera photos are well under this; check if it was accidentally a screen recording or very high-res scan.`;
+        status.className = 'status-msg error';
+        showToast('One photo is too large — 10MB max.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
+
+      try {
+        for (const file of files) {
+          const url = await uploadToCloudinary(file, 'image');
+
+          await addDoc(collection(db, 'notebookPhotos', currentUid, 'photos'), {
+            url, filename: file.name,
+            aiFeedback: null,
+            uploadedAt: new Date().toISOString()
+          });
+        }
+
+        status.textContent = `${files.length} photo(s) uploaded.`;
+        status.className = 'status-msg success';
+        showToast('Photo(s) uploaded.', 'success');
+        input.value = '';
+        await loadPhotos();
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Upload failed — check your connection and Cloudinary config (cloud name & upload preset).';
+        status.className = 'status-msg error';
+        showToast('Photo upload failed.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload Photo(s)';
+      }
+    };
+
+    async function loadPhotos() {
+      const grid = document.getElementById('photosGrid');
+      try {
+        const q = query(collection(db, 'notebookPhotos', currentUid, 'photos'), orderBy('uploadedAt', 'desc'));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+          grid.innerHTML = '<div class="entries-empty" style="grid-column:1/-1;">No photos uploaded yet.</div>';
+          return;
+        }
+
+        grid.innerHTML = '';
+        snap.forEach((docSnap) => {
+          const p = docSnap.data();
+          const card = document.createElement('div');
+          card.className = 'photo-card';
+          card.innerHTML = `
+            <button class="thumb-btn" data-action="open"><img src="${p.url}" alt="${escapeHtml(p.filename)}"></button>
+            <div class="photo-card-body">
+              <div style="font-size:11px; font-family:var(--font-mono); color:var(--light-blue); word-break:break-all;">${escapeHtml(p.filename)}${p.aiFeedback ? ' · feedback ready' : ''}</div>
+              <div class="photo-actions">
+                <button class="btn btn-outline" data-action="open">${p.aiFeedback ? 'View Feedback' : 'Get AI Feedback'}</button>
+                <button class="btn btn-outline" data-action="delete">Remove</button>
+              </div>
+            </div>
+          `;
+          card.querySelectorAll('[data-action="open"]').forEach(el =>
+            el.addEventListener('click', () => openPhotoModal(docSnap.id, p))
+          );
+          card.querySelector('[data-action="delete"]').addEventListener('click', () => deletePhoto(docSnap.id));
+          grid.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<div class="entries-empty" style="grid-column:1/-1;">Couldn\'t load photos.</div>';
+      }
+    }
+
+    async function getPhotoFeedback(photoId, photo) {
+      const modalFeedback = document.getElementById('modalPhotoFeedback');
+      const modalBtn = document.getElementById('modalGetFeedbackBtn');
+      if (modalFeedback) modalFeedback.querySelector('.body').textContent = 'Analysing photo...';
+      if (modalBtn) { modalBtn.disabled = true; modalBtn.textContent = 'Analysing...'; }
+
+      try {
+        const systemPrompt = `You are reviewing a photographed page from a FIRST Tech Challenge engineering notebook. Give brief, specific feedback (3-4 sentences): is the content legible and well-organised, does it show genuine engineering process (not just a diagram with no explanation), and one concrete suggestion. Be direct and practical.`;
+
+        const data = await callGroq([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: [
+            { type: 'text', text: 'Please review this notebook page.' },
+            { type: 'image_url', image_url: { url: photo.url } }
+          ]}
+        ], VISION_MODEL);
+        const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
+
+        await updateDoc(doc(db, 'notebookPhotos', currentUid, 'photos', photoId), { aiFeedback: feedback });
+        showToast('Feedback ready.', 'success');
+        await loadPhotos();
+
+        // if this photo's modal is still open, refresh it live with the result
+        if (currentModalPhotoId === photoId) {
+          openPhotoModal(photoId, { ...photo, aiFeedback: feedback });
+        }
+
+      } catch (err) {
+        console.error('Photo feedback error:', err);
+        if (modalFeedback) modalFeedback.querySelector('.body').textContent = 'Couldn\'t get feedback — the vision model may have changed. Check VISION_MODEL against console.groq.com/docs/models.';
+        if (modalBtn) { modalBtn.disabled = false; modalBtn.textContent = 'Get AI Feedback'; }
+        showToast('Couldn\'t get photo feedback.', 'error');
+      }
+    }
+
+    async function deletePhoto(photoId) {
+      if (!confirm('Remove this photo from your notebook? (The file itself stays on Cloudinary\'s free storage — unsigned uploads can\'t be deleted from the browser without exposing your Cloudinary API secret, which we deliberately avoid. This just removes it from your notebook.)')) return;
+      try {
+        await deleteDoc(doc(db, 'notebookPhotos', currentUid, 'photos', photoId));
+        showToast('Photo removed from notebook.', 'success');
+        await loadPhotos();
+      } catch (err) {
+        console.error(err);
+        showToast('Couldn\'t remove photo.', 'error');
+      }
+    }
+
+    // ==================== FINAL DOCUMENT ====================
+
+    async function extractTextFromFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'pdf') {
+        if (!window.pdfjsLib) throw new Error('PDF reader library failed to load.');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const buffer = await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        let text = '';
+        const maxPages = Math.min(pdf.numPages, 30); // cap to keep the AI prompt a sane size
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(it => it.str).join(' ') + '\n\n';
+        }
+        return text;
+      }
+
+      if (ext === 'docx' || ext === 'doc') {
+        if (!window.mammoth) throw new Error('Word reader library failed to load.');
+        const buffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+        return result.value;
+      }
+
+      throw new Error('Unsupported file type — use PDF or Word (.docx).');
+    }
+
+    window.uploadFinalDoc = async function () {
+      const input = document.getElementById('finalDocInput');
+      const file = input.files && input.files[0];
+      const status = document.getElementById('finalDocStatus');
+      const btn = document.getElementById('uploadFinalBtn');
+      const card = document.getElementById('finalDocCard');
+
+      if (!file) {
+        status.textContent = 'Choose a PDF or Word file first.';
+        status.className = 'status-msg error';
+        return;
+      }
+
+      const MAX_SIZE = 10 * 1024 * 1024; // Cloudinary free-tier limit: 10MB per file
+      if (file.size > MAX_SIZE) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+        status.textContent = `That file is ${sizeMb}MB — Cloudinary's free tier caps uploads at 10MB. Compress the PDF (or export the Word doc with smaller/lower-res images) and try again.`;
+        status.className = 'status-msg error';
+        showToast('File too large — 10MB max on the free tier.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
+      status.textContent = '';
+      status.className = 'status-msg';
+
+      try {
+        const url = await uploadToCloudinary(file, 'raw');
+
+        btn.textContent = 'Reading document...';
+        let extractedText = '';
+        try {
+          extractedText = await extractTextFromFile(file);
+        } catch (extractErr) {
+          console.error(extractErr);
+          status.textContent = `Uploaded, but couldn't read the text for feedback: ${extractErr.message}`;
+          status.className = 'status-msg error';
+        }
+
+        await addDocFinalDoc({ url, filename: file.name, uploadedAt: new Date().toISOString(), aiFeedback: null });
+        showToast('Notebook document uploaded.', 'success');
+        await renderFinalDoc();
+
+        if (extractedText && extractedText.trim().length > 20) {
+          btn.textContent = 'Getting feedback...';
+          await getFinalDocFeedback(extractedText, file.name);
+        }
+
+        status.textContent = 'Done.';
+        status.className = 'status-msg success';
+
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Upload failed — check your connection and Cloudinary config (cloud name & upload preset).';
+        status.className = 'status-msg error';
+        showToast('Document upload failed.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Upload & Review';
+      }
+    };
+
+    async function addDocFinalDoc(data) {
+      await setDoc(doc(db, 'notebookFinal', currentUid), data);
+    }
+
+    async function getFinalDocFeedback(text, filename) {
+      const truncated = text.slice(0, 12000); // keep prompt a sane size
+
+      const systemPrompt = `You are reviewing a complete FIRST Tech Challenge engineering notebook submitted for judging. Give a structured, honest review (roughly 200-300 words): overall organisation and clarity, whether the engineering design process is genuinely documented (not just results), depth of reflection, and 2-3 concrete, specific suggestions to strengthen it before submission. Be direct, not just encouraging.`;
+
+      try {
+        const data = await callGroq([
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Notebook filename: ${filename}\n\nExtracted content:\n${truncated}` }
+        ]);
+        const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
+
+        const existing = await getDoc(doc(db, 'notebookFinal', currentUid));
+        await setDoc(doc(db, 'notebookFinal', currentUid), { ...existing.data(), aiFeedback: feedback });
+
+        await renderFinalDoc();
+
+      } catch (err) {
+        console.error('Final doc feedback error:', err);
+        showToast('Couldn\'t get document feedback.', 'error');
+      }
+    }
+
+    async function renderFinalDoc() {
+      const card = document.getElementById('finalDocCard');
+      try {
+        const snap = await getDoc(doc(db, 'notebookFinal', currentUid));
+        if (!snap.exists()) {
+          card.innerHTML = '<div class="entries-empty">No final version uploaded yet.</div>';
+          return;
+        }
+        const d = snap.data();
+        card.innerHTML = `
+          <div class="final-doc-card">
+            <div class="filename">${escapeHtml(d.filename)}</div>
+            <a href="${d.url}" target="_blank" rel="noopener">Open uploaded file →</a>
+            <div class="ai-feedback${d.aiFeedback ? '' : ' loading'}" style="margin-top:14px;">
+              <span class="label"><span class="dot"></span>AI Feedback</span>
+              <div class="body">${d.aiFeedback ? renderMarkdown(d.aiFeedback) : 'No feedback yet — re-upload to generate it, or check the console if it failed.'}</div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        console.error(err);
+        card.innerHTML = '<div class="entries-empty">Couldn\'t load the final document.</div>';
+      }
+    }
+
+    // ---------- toast notifications (shared utility) ----------
+    window.showToast = function (message, type = 'success', duration = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+      }, duration);
+    };
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Pit Checklist</title>
+<style>
+  :root {
+    --navy: #00295c;
+    --navy-deep: #001835;
+    --light-blue: #a3c1e7;
+    --yellow: #fbd708;
+    --white: #f4f7fb;
+    --red: #ff6b6b;
+    --panel-border: rgba(163, 193, 231, 0.18);
+    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    background: var(--navy-deep);
+    color: var(--white);
+    font-family: var(--font-body);
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--navy);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--yellow);
+    text-transform: uppercase;
+  }
+  .main-nav { display: flex; align-items: center; gap: 4px; overflow-x: auto; }
+  .main-nav a {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--light-blue);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
+  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+
+  .team-chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--light-blue);
+    border: 1px solid var(--panel-border);
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+
+  main { max-width: 640px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .loading-state, .error-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--light-blue);
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+  .error-state a { color: var(--yellow); }
+  .hidden { display: none !important; }
+
+  .page-head { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .page-head h1 { font-size: clamp(26px, 3vw, 32px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .page-head p { color: var(--light-blue); font-size: 14px; line-height: 1.6; max-width: 420px; }
+
+  .progress-ring-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .progress-text { font-family: var(--font-mono); font-size: 13px; color: var(--light-blue); text-align: right; }
+  .progress-text .count { color: var(--yellow); font-size: 18px; font-weight: 700; display: block; }
+
+  .checklist-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: 22px;
+  }
+
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .checklist-item:last-child { border-bottom: none; }
+
+  .checklist-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--yellow);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .checklist-item label {
+    flex: 1;
+    font-size: 14.5px;
+    cursor: pointer;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
+  }
+  .checklist-item.checked label {
+    color: var(--light-blue);
+    text-decoration: line-through;
+  }
+
+  .remove-item-btn {
+    background: transparent;
+    border: none;
+    color: rgba(163, 193, 231, 0.5);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+  }
+  .remove-item-btn:hover { color: var(--red); }
+
+  .add-item-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .add-item-row input {
+    flex: 1;
+    padding: 11px 13px;
+    background: rgba(163, 193, 231, 0.06);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+  }
+  .add-item-row input:focus { border-color: var(--yellow); }
+
+  .btn {
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-body);
+    border: none;
+    transition: filter 0.15s ease, opacity 0.15s ease;
+  }
+  .btn-primary { background: var(--yellow); color: var(--navy-deep); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--light-blue);
+  }
+  .btn-outline:hover { border-color: var(--red); color: var(--red); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .actions-row { display: flex; justify-content: flex-end; }
+
+  #toastContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    color: var(--white);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 220px;
+    max-width: 340px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.toast-success { border-left-color: var(--yellow); }
+  .toast.toast-error { border-left-color: #ff6b6b; }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
+    background-size: 400% 100%;
+    animation: skeleton-pulse 1.4s ease infinite;
+    border-radius: 6px;
+  }
+  @keyframes skeleton-pulse {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+  .skeleton-block { height: 14px; margin-bottom: 10px; }
+  .skeleton-block.w-60 { width: 60%; }
+  .skeleton-block.w-80 { width: 80%; }
+  .skeleton-block.w-40 { width: 40%; }
+  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 14px 18px; }
+    main { padding: 32px 18px 60px; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="eyebrow">Pit Wall // Checklist</span>
+      <nav class="main-nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="robot-profile.html">Robot</a>
+        <a href="scouting.html">Scouting</a>
+        <a href="schedule.html">Schedule</a>
+        <a href="chat.html">AI Chat</a>
+        <a href="engineering-notebook.html">Notebook</a>
+        <a href="pit-checklist.html" class="active">Checklist</a>
+        <a href="settings.html">Settings</a>
+      </nav>
+    </div>
+    <span class="team-chip" id="teamChip">—</span>
+  </div>
+
+  <main>
+    <div class="loading-state" id="loadingState">
+      <div style="max-width:420px; margin:0 auto; text-align:left;">
+        <div class="skeleton skeleton-block w-40"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-block w-80"></div>
+      </div>
+    </div>
+
+    <div class="error-state hidden" id="errorState">
+      <p id="errorMessage">Something went wrong.</p>
+      <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+    </div>
+
+    <div id="pageContent" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Pit Checklist</h1>
+          <p>Run through this before you head to competition. Check items off, add your own, or reset before the next event.</p>
+        </div>
+        <div class="progress-ring-wrap">
+          <div class="progress-text">
+            <span class="count" id="progressCount">0/0</span>
+            done
+          </div>
+        </div>
+      </div>
+
+      <div class="add-item-row">
+        <input type="text" id="newItemInput" placeholder="Add a checklist item..." onkeydown="if(event.key==='Enter') addItem()">
+        <button class="btn btn-primary" onclick="addItem()">Add</button>
+      </div>
+
+      <div class="checklist-card" id="checklistCard"></div>
+
+      <div class="actions-row">
+        <button class="btn btn-outline" onclick="resetChecklist()">Uncheck All (New Competition)</button>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    // TODO: replace with your actual Firebase project config (same as your other pages)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
+      authDomain: "lb-dev-2444f.firebaseapp.com",
+      projectId: "lb-dev-2444f",
+      storageBucket: "lb-dev-2444f.firebasestorage.app",
+      messagingSenderId: "262360112421",
+      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUid = null;
+
+    // default items shown the very first time a team opens this page
+    const DEFAULT_ITEMS = [
+      { id: 'item_battery', text: 'Battery charged (and spare packed)', checked: false },
+      { id: 'item_weighed', text: 'Robot weighed and inspected', checked: false },
+      { id: 'item_controller', text: 'Driver station / controller charged & paired', checked: false },
+      { id: 'item_tools', text: 'Toolkit packed (spare screws, zip ties, tape)', checked: false },
+      { id: 'item_spare_parts', text: 'Spare parts packed (motors, servos, wheels)', checked: false },
+      { id: 'item_laptop', text: 'Laptop charged with code backed up', checked: false },
+      { id: 'item_practice', text: 'Practiced autonomous & driver period', checked: false },
+      { id: 'item_pit_sign', text: 'Pit sign / banner packed', checked: false }
+    ];
+
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const pageContent = document.getElementById('pageContent');
+    const checklistCard = document.getElementById('checklistCard');
+
+    let items = [];
+
+    function showError(msg) {
+      loadingState.classList.add('hidden');
+      pageContent.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorState.classList.remove('hidden');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUid = user.uid;
+
+      try {
+        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        if (!teamSnap.exists()) {
+          showError('No team profile found for this account.');
+          return;
+        }
+        const team = teamSnap.data();
+        document.getElementById('teamChip').textContent = `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+
+        const checklistSnap = await getDoc(doc(db, 'pitChecklist', user.uid));
+        items = (checklistSnap.exists() && Array.isArray(checklistSnap.data().items))
+          ? checklistSnap.data().items
+          : DEFAULT_ITEMS;
+
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+        renderChecklist();
+
+      } catch (err) {
+        console.error(err);
+        showError('Couldn\'t load your checklist. Check your connection and try again.');
+      }
+    });
+
+    function renderChecklist() {
+      checklistCard.innerHTML = '';
+
+      items.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'checklist-item' + (item.checked ? ' checked' : '');
+        row.innerHTML = `
+          <input type="checkbox" id="chk_${item.id}" ${item.checked ? 'checked' : ''}>
+          <label for="chk_${item.id}">${escapeHtml(item.text)}</label>
+          <button class="remove-item-btn" title="Remove item">✕</button>
+        `;
+        row.querySelector('input').addEventListener('change', (e) => toggleItem(item.id, e.target.checked));
+        row.querySelector('.remove-item-btn').addEventListener('click', () => removeItem(item.id));
+        checklistCard.appendChild(row);
+      });
+
+      const doneCount = items.filter(i => i.checked).length;
+      document.getElementById('progressCount').textContent = `${doneCount}/${items.length}`;
+    }
+
+    async function persist() {
+      try {
+        await setDoc(doc(db, 'pitChecklist', currentUid), {
+          items,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error(err);
+        showToast('Couldn\'t save checklist changes.', 'error');
+      }
+    }
+
+    function toggleItem(id, checked) {
+      const item = items.find(i => i.id === id);
+      if (item) item.checked = checked;
+      renderChecklist();
+      persist();
+    }
+
+    window.addItem = function () {
+      const input = document.getElementById('newItemInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      items.push({ id: 'item_' + Date.now(), text, checked: false });
+      input.value = '';
+      renderChecklist();
+      persist();
+      showToast('Item added.', 'success');
+    };
+
+    function removeItem(id) {
+      items = items.filter(i => i.id !== id);
+      renderChecklist();
+      persist();
+      showToast('Item removed.', 'success');
+    }
+
+    window.resetChecklist = function () {
+      if (!confirm('Uncheck every item? Good to do before a new competition day.')) return;
+      items.forEach(i => i.checked = false);
+      renderChecklist();
+      persist();
+      showToast('Checklist reset for a new competition.', 'success');
+    };
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ---------- toast notifications (shared utility) ----------
+    window.showToast = function (message, type = 'success', duration = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+      }, duration);
+    };
+  </script>
+
+</body>
+</html>

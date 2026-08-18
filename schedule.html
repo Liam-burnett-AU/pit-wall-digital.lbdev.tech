@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Schedule</title>
+<style>
+  :root {
+    --navy: #00295c;
+    --navy-deep: #001835;
+    --light-blue: #a3c1e7;
+    --yellow: #fbd708;
+    --white: #f4f7fb;
+    --red: #ff6b6b;
+    --panel-border: rgba(163, 193, 231, 0.18);
+    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    background: var(--navy-deep);
+    color: var(--white);
+    font-family: var(--font-body);
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 12px;
+    column-gap: 20px;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--navy);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: wrap; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--yellow);
+    text-transform: uppercase;
+  }
+  .main-nav { display: flex; align-items: center; gap: 4px; overflow-x: auto; }
+  .main-nav a {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--light-blue);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
+  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+
+  .team-chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--light-blue);
+    border: 1px solid var(--panel-border);
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+
+  main { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .loading-state, .error-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--light-blue);
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+  .error-state a { color: var(--yellow); }
+  .hidden { display: none !important; }
+
+  .page-head { margin-bottom: 28px; }
+  .page-head h1 { font-size: clamp(26px, 3vw, 32px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .page-head p { color: var(--light-blue); font-size: 14px; line-height: 1.6; }
+
+  .config-warning {
+    background: rgba(255, 107, 107, 0.08);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .config-warning code {
+    font-family: var(--font-mono);
+    background: rgba(255,255,255,0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .event-select-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .event-select-card label {
+    display: block;
+    font-size: 11.5px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+    color: var(--light-blue);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .event-select-card select {
+    width: 100%;
+    padding: 11px 13px;
+    background: rgba(163, 193, 231, 0.06);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--white);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+  }
+  .event-select-card select option { background: var(--navy-deep); }
+
+  .level-toggle { display: flex; gap: 8px; margin-top: 14px; }
+  .level-btn {
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--light-blue);
+  }
+  .level-btn.active { background: var(--yellow); color: var(--navy-deep); border-color: var(--yellow); font-weight: 700; }
+
+  .match-card {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .match-card.our-match { border-color: var(--yellow); background: rgba(251, 215, 8, 0.05); }
+
+  .match-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--light-blue);
+    min-width: 70px;
+  }
+  .match-time {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--light-blue);
+    min-width: 90px;
+  }
+
+  .alliance-block { display: flex; gap: 18px; flex: 1; flex-wrap: wrap; }
+  .alliance {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .alliance-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .alliance-label.red { background: rgba(255,90,90,0.15); color: #ff8f8f; }
+  .alliance-label.blue { background: rgba(90,150,255,0.15); color: #8fbaff; }
+  .team-tag { font-family: var(--font-mono); }
+  .team-tag.mine { color: var(--yellow); font-weight: 700; }
+
+  .empty-note {
+    text-align: center;
+    color: var(--light-blue);
+    font-size: 13.5px;
+    padding: 30px 0;
+    border: 1px dashed var(--panel-border);
+    border-radius: 12px;
+  }
+
+  #toastContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--navy);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    color: var(--white);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    min-width: 220px;
+    max-width: 340px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.toast-success { border-left-color: var(--yellow); }
+  .toast.toast-error { border-left-color: #ff6b6b; }
+
+  .skeleton {
+    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
+    background-size: 400% 100%;
+    animation: skeleton-pulse 1.4s ease infinite;
+    border-radius: 6px;
+  }
+  @keyframes skeleton-pulse {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+  .skeleton-block { height: 14px; margin-bottom: 10px; }
+  .skeleton-block.w-60 { width: 60%; }
+  .skeleton-block.w-40 { width: 40%; }
+  .skeleton-card { height: 60px; border-radius: 10px; margin-bottom: 10px; }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 14px 18px; }
+    main { padding: 32px 18px 60px; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="eyebrow">Pit Wall // Schedule</span>
+      <nav class="main-nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="robot-profile.html">Robot</a>
+        <a href="scouting.html">Scouting</a>
+        <a href="schedule.html" class="active">Schedule</a>
+        <a href="chat.html">AI Chat</a>
+        <a href="engineering-notebook.html">Notebook</a>
+        <a href="pit-checklist.html">Checklist</a>
+        <a href="settings.html">Settings</a>
+      </nav>
+    </div>
+    <span class="team-chip" id="teamChip">—</span>
+  </div>
+
+  <main>
+    <div class="loading-state" id="loadingState">
+      <div style="max-width:420px; margin:0 auto; text-align:left;">
+        <div class="skeleton skeleton-block w-40"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+    </div>
+
+    <div class="error-state hidden" id="errorState">
+      <p id="errorMessage">Something went wrong.</p>
+      <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+    </div>
+
+    <div id="pageContent" class="hidden">
+      <div class="page-head">
+        <h1>Match Schedule</h1>
+        <p>Pulled from FIRST's official FTC Events API for your team.</p>
+      </div>
+
+      <div class="event-select-card">
+        <label for="eventSelect">Your registered events</label>
+        <select id="eventSelect" onchange="onEventChange()"></select>
+        <div class="level-toggle">
+          <button class="level-btn active" id="levelQual" onclick="setLevel('qual')">Qualification</button>
+          <button class="level-btn" id="levelPlayoff" onclick="setLevel('playoff')">Playoff</button>
+        </div>
+      </div>
+
+      <div id="matchList"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    // TODO: replace with your actual Firebase project config (same as your other pages)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
+      authDomain: "lb-dev-2444f.firebaseapp.com",
+      projectId: "lb-dev-2444f",
+      storageBucket: "lb-dev-2444f.firebasestorage.app",
+      messagingSenderId: "262360112421",
+      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
+    };
+
+    // ---------- FTC Events API config ----------
+    // Season year the competition started in — e.g. the 2026-2027 season is "2026"
+    const FTC_EVENTS_SEASON = "2026";
+
+    // Calls FIRST's official FTC Events API through a Cloudflare Worker —
+    // your FTC_EVENTS_USERNAME and FTC_EVENTS_API_KEY live as Worker
+    // secrets now, never in this file or sent to the browser.
+    // TODO: replace with your deployed ftc-events-proxy Worker URL.
+    const FTC_EVENTS_PROXY_URL = "https://ftc-events-proxy.liamburnett40.workers.dev";
+
+    async function ftcEventsFetch(path) {
+      const res = await fetch(`${FTC_EVENTS_PROXY_URL}/?path=${encodeURIComponent(path)}`);
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`FTC Events proxy returned ${res.status}${errBody ? ': ' + errBody : ''}`);
+      }
+      return res.json();
+    }
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let teamNumber = null;
+    let currentEventCode = null;
+    let currentLevel = 'qual';
+
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const pageContent = document.getElementById('pageContent');
+    const matchList = document.getElementById('matchList');
+
+    function showError(msg) {
+      loadingState.classList.add('hidden');
+      pageContent.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorState.classList.remove('hidden');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      try {
+        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        if (!teamSnap.exists()) {
+          showError('No team profile found for this account.');
+          return;
+        }
+        const team = teamSnap.data();
+        teamNumber = team.teamNumber;
+        document.getElementById('teamChip').textContent = `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+
+        if (!teamNumber) {
+          showError('No team number set — add it in Settings first.');
+          return;
+        }
+
+        if (FTC_EVENTS_PROXY_URL.includes('YOUR-FTC-WORKER-SUBDOMAIN')) {
+          loadingState.classList.add('hidden');
+          pageContent.classList.remove('hidden');
+          matchList.innerHTML = `
+            <div class="config-warning">
+              FTC Events API isn't configured yet. Open <code>schedule.html</code> and set
+              <code>FTC_EVENTS_PROXY_URL</code> near the top of the script to your deployed
+              Cloudflare Worker URL, and make sure that Worker has your FTC Events
+              username/API key set as secrets.
+            </div>`;
+          document.querySelector('.event-select-card').classList.add('hidden');
+          return;
+        }
+
+        await loadEvents();
+
+      } catch (err) {
+        console.error(err);
+        showError('Couldn\'t load your team data. Check your connection and try again.');
+      }
+    });
+
+    async function loadEvents() {
+      try {
+        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/events?teamNumber=${teamNumber}`);
+        const events = data.events || [];
+
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+
+        const select = document.getElementById('eventSelect');
+        if (events.length === 0) {
+          select.innerHTML = '<option value="">No registered events found for this team</option>';
+          matchList.innerHTML = '<div class="empty-note">No events found for your team this season yet.</div>';
+          return;
+        }
+
+        select.innerHTML = events.map(e =>
+          `<option value="${e.code}">${escapeHtml(e.name)} (${e.dateStart?.slice(0,10) || ''})</option>`
+        ).join('');
+
+        currentEventCode = events[0].code;
+        await loadSchedule();
+
+      } catch (err) {
+        console.error(err);
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+        matchList.innerHTML = `<div class="empty-note">Couldn't load events — check your FTC Events API credentials and connection.<br>(${escapeHtml(err.message)})</div>`;
+      }
+    }
+
+    window.onEventChange = function () {
+      currentEventCode = document.getElementById('eventSelect').value;
+      loadSchedule();
+    };
+
+    window.setLevel = function (level) {
+      currentLevel = level;
+      document.getElementById('levelQual').classList.toggle('active', level === 'qual');
+      document.getElementById('levelPlayoff').classList.toggle('active', level === 'playoff');
+      loadSchedule();
+    };
+
+    async function loadSchedule() {
+      if (!currentEventCode) return;
+      matchList.innerHTML = `
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>`;
+
+      try {
+        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/schedule/${currentEventCode}?tournamentLevel=${currentLevel}&teamNumber=${teamNumber}`);
+        const matches = data.schedule || [];
+
+        if (matches.length === 0) {
+          matchList.innerHTML = `<div class="empty-note">No ${currentLevel} matches published for this event yet.</div>`;
+          return;
+        }
+
+        matchList.innerHTML = matches.map(renderMatch).join('');
+
+      } catch (err) {
+        console.error(err);
+        matchList.innerHTML = `<div class="empty-note">Couldn't load the schedule — check your connection.<br>(${escapeHtml(err.message)})</div>`;
+      }
+    }
+
+    function renderMatch(m) {
+      const teams = m.teams || [];
+      const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
+      const blue = teams.filter(t => (t.station || '').toLowerCase().includes('blue'));
+      const isOurMatch = teams.some(t => String(t.teamNumber) === String(teamNumber));
+      const timeStr = m.startTime ? new Date(m.startTime).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : 'TBD';
+
+      const teamTag = (t) => {
+        const mine = String(t.teamNumber) === String(teamNumber);
+        return `<span class="team-tag${mine ? ' mine' : ''}">#${t.teamNumber}</span>`;
+      };
+
+      return `
+        <div class="match-card${isOurMatch ? ' our-match' : ''}">
+          <span class="match-num">Match ${m.matchNumber ?? '?'}</span>
+          <span class="match-time">${timeStr}</span>
+          <div class="alliance-block">
+            <div class="alliance"><span class="alliance-label red">Red</span> ${red.map(teamTag).join(' ')}</div>
+            <div class="alliance"><span class="alliance-label blue">Blue</span> ${blue.map(teamTag).join(' ')}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ---------- toast notifications (shared utility) ----------
+    window.showToast = function (message, type = 'success', duration = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+      }, duration);
+    };
+  </script>
+
+</body>
+</html>
