@@ -4,363 +4,89 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Robot Profile</title>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  :root {
-    --navy: #00295c;
-    --navy-deep: #001835;
-    --light-blue: #a3c1e7;
-    --yellow: #fbd708;
-    --white: #f4f7fb;
-    --panel-border: rgba(163, 193, 231, 0.18);
-    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    min-height: 100%;
-    background: var(--navy-deep);
-    color: var(--white);
-    font-family: var(--font-body);
-  }
-
-  /* ---------- top bar ---------- */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 32px;
-    border-bottom: 1px solid var(--panel-border);
-    background: var(--navy);
-  }
-
-  .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .back-link {
-    color: var(--light-blue);
-    text-decoration: none;
-    font-size: 13px;
-    font-family: var(--font-mono);
-    transition: color 0.15s ease;
-  }
-
-  .back-link:hover { color: var(--yellow); }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--yellow);
-    text-transform: uppercase;
-  }
-
-  .main-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-  }
-  .main-nav a {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    color: var(--light-blue);
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, background 0.15s ease;
-  }
-  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
-  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
-
-  .team-chip {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--light-blue);
-    border: 1px solid var(--panel-border);
-    padding: 5px 10px;
-    border-radius: 20px;
-  }
-
-  /* ---------- main ---------- */
-  main {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 48px 24px 64px;
-  }
-
-  .loading-state, .error-state {
-    text-align: center;
-    padding: 80px 20px;
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-    font-size: 14px;
-  }
-
-  .error-state a { color: var(--yellow); }
-
-  .hidden { display: none !important; }
-
-  .page-head h1 {
-    font-size: clamp(26px, 3vw, 32px);
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 8px;
-  }
-
-  .page-head p {
-    color: var(--light-blue);
-    font-size: 14px;
-    line-height: 1.6;
-    margin-bottom: 32px;
-  }
-
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-  }
-
-  .field label {
-    display: block;
-    font-size: 12px;
-    font-family: var(--font-mono);
-    letter-spacing: 0.5px;
-    color: var(--light-blue);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
-
-  .field .hint {
-    font-size: 12px;
-    color: rgba(163, 193, 231, 0.65);
-    margin-top: 6px;
-    font-family: var(--font-body);
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
-  .field input,
-  .field textarea {
-    width: 100%;
-    padding: 12px 14px;
-    background: rgba(163, 193, 231, 0.06);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    color: var(--white);
-    font-size: 14px;
-    font-family: var(--font-body);
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    resize: vertical;
-  }
-
-  .field textarea { min-height: 90px; }
-
-  .field input:focus,
-  .field textarea:focus {
-    border-color: var(--yellow);
-    box-shadow: 0 0 0 3px rgba(251, 215, 8, 0.15);
-  }
-
-  .field input::placeholder,
-  .field textarea::placeholder {
-    color: rgba(244, 247, 251, 0.32);
-  }
-
-  .actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-top: 8px;
-  }
-
-  .save-btn {
-    padding: 13px 26px;
-    background: var(--yellow);
-    color: var(--navy-deep);
-    border: none;
-    border-radius: 8px;
-    font-size: 14.5px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: filter 0.15s ease;
-    font-family: var(--font-body);
-  }
-
-  .save-btn:hover { filter: brightness(1.08); }
-  .save-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-  .save-status {
-    font-size: 13px;
-    font-family: var(--font-mono);
-    display: none;
-  }
-
-  .save-status.success { display: inline; color: var(--yellow); }
-  .save-status.error { display: inline; color: #ffb4b4; }
-
-  .last-updated {
-    margin-top: 28px;
-    font-size: 12px;
-    color: rgba(163, 193, 231, 0.6);
-    font-family: var(--font-mono);
-  }
-
-  @media (max-width: 640px) {
-    .topbar { padding: 14px 18px; }
-    main { padding: 32px 18px 48px; }
-  }
-
-  /* ---------- toast notifications ---------- */
-  #toastContainer {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-left: 3px solid var(--yellow);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    font-family: var(--font-body);
-    color: var(--white);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    min-width: 220px;
-    max-width: 340px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: auto;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.toast-success { border-left-color: var(--yellow); }
-  .toast.toast-error { border-left-color: #ff6b6b; }
-
-  /* ---------- skeleton loaders ---------- */
-  .skeleton {
-    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
-    background-size: 400% 100%;
-    animation: skeleton-pulse 1.4s ease infinite;
-    border-radius: 6px;
-  }
-  @keyframes skeleton-pulse {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-  }
-  .skeleton-block { height: 14px; margin-bottom: 10px; }
-  .skeleton-block.w-60 { width: 60%; }
-  .skeleton-block.w-80 { width: 80%; }
-  .skeleton-block.w-40 { width: 40%; }
-  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
+  form { display: flex; flex-direction: column; gap: 22px; }
+  .actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+  .last-updated { margin-top: 6px; font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); }
 </style>
 </head>
 <body>
 
   <div id="toastContainer"></div>
 
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="eyebrow">Pit Wall // Robot Profile</span>
+  <div class="app-shell">
+    <div id="navRoot"></div>
 
-      <nav class="main-nav">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="robot-profile.html" class="active">Robot</a>
-        <a href="scouting.html">Scouting</a>
-        <a href="schedule.html">Schedule</a>
-        <a href="chat.html">AI Chat</a>
-        <a href="engineering-notebook.html">Notebook</a>
-        <a href="pit-checklist.html">Checklist</a>
-        <a href="settings.html">Settings</a>
-      </nav>
+    <div class="app-main">
+      <main class="page narrow">
+        <div class="state-block" id="loadingState">
+          <div style="max-width:420px; margin:0 auto; text-align:left;">
+            <div class="skeleton skeleton-block w-40"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-block w-80"></div>
+            <div class="skeleton skeleton-block w-60"></div>
+          </div>
+        </div>
+
+        <div class="state-block hidden" id="errorState">
+          <p id="errorMessage">Something went wrong.</p>
+          <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+        </div>
+
+        <div id="formContent" class="hidden">
+          <div class="page-head">
+            <div>
+              <h1>Your Robot</h1>
+              <p>This info feeds directly into the AI chat and event analysis — the more detail here, the more specific the advice can be.</p>
+            </div>
+          </div>
+
+          <form class="card" id="robotForm" onsubmit="return false;">
+            <div class="field">
+              <label for="drivetrain">Drivetrain</label>
+              <input type="text" id="drivetrain" placeholder="e.g. Mecanum, tank, swerve...">
+            </div>
+
+            <div class="field">
+              <label for="gamePieceMechanism">Game piece mechanism</label>
+              <textarea id="gamePieceMechanism" placeholder="Describe how your robot picks up, holds, and scores game pieces..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="autonomousRoutine">Autonomous routine</label>
+              <textarea id="autonomousRoutine" placeholder="What does your robot do during the autonomous period?"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="notes">Additional notes</label>
+              <textarea id="notes" placeholder="Anything else worth knowing — known issues, upcoming changes, strategy notes..."></textarea>
+              <div class="hint">Optional — free text, the AI will use this for extra context.</div>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn btn-primary" id="saveBtn">Save Profile</button>
+              <span class="status-msg" id="saveStatus"></span>
+            </div>
+            <div class="last-updated hidden" id="lastUpdated"></div>
+          </form>
+        </div>
+      </main>
     </div>
-    <span class="team-chip" id="teamChip">—</span>
   </div>
-
-  <main>
-    <div class="loading-state" id="loadingState">
-      <div style="max-width:420px; margin:0 auto; text-align:left;">
-        <div class="skeleton skeleton-block w-40"></div>
-        <div class="skeleton skeleton-card"></div>
-        <div class="skeleton skeleton-block w-80"></div>
-        <div class="skeleton skeleton-block w-60"></div>
-      </div>
-    </div>
-
-    <div class="error-state hidden" id="errorState">
-      <p id="errorMessage">Something went wrong.</p>
-      <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
-    </div>
-
-    <div id="formContent" class="hidden">
-      <div class="page-head">
-        <h1>Your Robot</h1>
-        <p>This info feeds directly into the AI chat — the more detail here, the more specific its advice can be.</p>
-      </div>
-
-      <form id="robotForm" onsubmit="return false;">
-        <div class="field">
-          <label for="drivetrain">Drivetrain</label>
-          <input type="text" id="drivetrain" placeholder="e.g. Mecanum, tank, swerve...">
-        </div>
-
-        <div class="field">
-          <label for="gamePieceMechanism">Game piece mechanism</label>
-          <textarea id="gamePieceMechanism" placeholder="Describe how your robot picks up, holds, and scores game pieces..."></textarea>
-        </div>
-
-        <div class="field">
-          <label for="autonomousRoutine">Autonomous routine</label>
-          <textarea id="autonomousRoutine" placeholder="What does your robot do during the autonomous period?"></textarea>
-        </div>
-
-        <div class="field">
-          <label for="notes">Additional notes</label>
-          <textarea id="notes" placeholder="Anything else worth knowing — known issues, upcoming changes, strategy notes..."></textarea>
-          <div class="hint">Optional — free text, the AI will use this for extra context.</div>
-        </div>
-
-        <div class="actions">
-          <button class="save-btn" id="saveBtn" onclick="saveProfile()">Save Profile</button>
-          <span class="save-status" id="saveStatus"></span>
-        </div>
-
-        <div class="last-updated hidden" id="lastUpdated"></div>
-      </form>
-    </div>
-  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js";
 
-    // TODO: replace with your actual Firebase project config (same as your other pages)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
-      authDomain: "lb-dev-2444f.firebaseapp.com",
-      projectId: "lb-dev-2444f",
-      storageBucket: "lb-dev-2444f.firebasestorage.app",
-      messagingSenderId: "262360112421",
-      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
-    };
+    document.getElementById('navRoot').innerHTML = renderNav('robot');
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    wireNav(auth, signOut);
 
     let currentUid = null;
 
@@ -379,7 +105,6 @@
       errorState.classList.remove('hidden');
     }
 
-    // ---------- auth gate + load existing data ----------
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = 'index.html';
@@ -393,9 +118,7 @@
           showError('No team profile found for this account.');
           return;
         }
-        const team = teamSnap.data();
-        document.getElementById('teamChip').textContent =
-          `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+        setTeamChip(teamSnap.data());
 
         const robotSnap = await getDoc(doc(db, 'robots', user.uid));
         if (robotSnap.exists()) {
@@ -405,11 +128,7 @@
           document.getElementById('autonomousRoutine').value = robot.autonomousRoutine || '';
           document.getElementById('notes').value = robot.notes || '';
 
-          if (robot.updatedAt) {
-            const d = new Date(robot.updatedAt);
-            lastUpdated.textContent = `Last updated: ${d.toLocaleDateString('en-AU')} ${d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`;
-            lastUpdated.classList.remove('hidden');
-          }
+          if (robot.updatedAt) showLastUpdated(robot.updatedAt);
         }
 
         loadingState.classList.add('hidden');
@@ -417,12 +136,17 @@
 
       } catch (err) {
         console.error(err);
-        showError('Couldn\'t load your robot profile. Check your connection and try again.');
+        showError("Couldn't load your robot profile. Check your connection and try again.");
       }
     });
 
-    // ---------- save ----------
-    window.saveProfile = async function () {
+    function showLastUpdated(iso) {
+      const d = new Date(iso);
+      lastUpdated.textContent = `Last updated: ${d.toLocaleDateString('en-AU')} ${d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`;
+      lastUpdated.classList.remove('hidden');
+    }
+
+    saveBtn.addEventListener('click', async () => {
       const drivetrain = document.getElementById('drivetrain').value.trim();
       const gamePieceMechanism = document.getElementById('gamePieceMechanism').value.trim();
       const autonomousRoutine = document.getElementById('autonomousRoutine').value.trim();
@@ -430,54 +154,29 @@
 
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
-      saveStatus.className = 'save-status';
+      saveStatus.className = 'status-msg';
       saveStatus.textContent = '';
 
       try {
         const updatedAt = new Date().toISOString();
-
-        await setDoc(doc(db, 'robots', currentUid), {
-          drivetrain,
-          gamePieceMechanism,
-          autonomousRoutine,
-          notes,
-          updatedAt
-        });
+        await setDoc(doc(db, 'robots', currentUid), { drivetrain, gamePieceMechanism, autonomousRoutine, notes, updatedAt });
 
         saveStatus.textContent = 'Saved.';
-        saveStatus.className = 'save-status success';
-        showToast('Robot profile saved.', 'success');
-
-        const d = new Date(updatedAt);
-        lastUpdated.textContent = `Last updated: ${d.toLocaleDateString('en-AU')} ${d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`;
-        lastUpdated.classList.remove('hidden');
+        saveStatus.className = 'status-msg success';
+        toast('Robot profile saved.', 'success');
+        showLastUpdated(updatedAt);
 
       } catch (err) {
         console.error('Save error:', err);
-        saveStatus.textContent = 'Couldn\'t save — check your connection and try again.';
-        saveStatus.className = 'save-status error';
-        showToast('Couldn\'t save robot profile.', 'error');
+        saveStatus.textContent = "Couldn't save — check your connection and try again.";
+        saveStatus.className = 'status-msg error';
+        toast("Couldn't save robot profile.", 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Profile';
       }
-    };
-  
-    // ---------- toast notifications (shared utility) ----------
-    window.showToast = function (message, type = 'success', duration = 3500) {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      requestAnimationFrame(() => toast.classList.add('show'));
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 250);
-      }, duration);
-    };
-</script>
+    });
+  </script>
 
 </body>
 </html>

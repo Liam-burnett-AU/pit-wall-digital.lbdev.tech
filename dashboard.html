@@ -4,441 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Dashboard</title>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  :root {
-    --navy: #00295c;
-    --navy-deep: #001835;
-    --light-blue: #a3c1e7;
-    --yellow: #fbd708;
-    --white: #f4f7fb;
-    --panel-border: rgba(163, 193, 231, 0.18);
-    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    min-height: 100%;
-    background: var(--navy-deep);
-    color: var(--white);
-    font-family: var(--font-body);
-  }
-
-  /* ---------- top bar ---------- */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 40px;
-    border-bottom: 1px solid var(--panel-border);
-    background: var(--navy);
-  }
-
-  .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--yellow);
-    text-transform: uppercase;
-  }
-
-  .main-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-  }
-  .main-nav a {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    color: var(--light-blue);
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, background 0.15s ease;
-  }
-  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
-  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
-
-  .team-chip {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--light-blue);
-    border: 1px solid var(--panel-border);
-    padding: 5px 10px;
-    border-radius: 20px;
-  }
-
-  .signout-btn {
-    background: transparent;
-    border: 1px solid var(--panel-border);
-    color: var(--light-blue);
-    padding: 8px 16px;
-    border-radius: 7px;
-    font-size: 13px;
-    cursor: pointer;
-    font-family: var(--font-body);
-    transition: border-color 0.15s ease, color 0.15s ease;
-  }
-
-  .signout-btn:hover {
-    border-color: var(--yellow);
-    color: var(--yellow);
-  }
-
-  /* ---------- main layout ---------- */
-  main {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 48px 40px 64px;
-  }
-
-  .loading-state, .error-state {
-    text-align: center;
-    padding: 80px 20px;
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-    font-size: 14px;
-  }
-
-  .error-state a {
-    color: var(--yellow);
-  }
-
-  .hidden { display: none; }
-
-  .welcome-block {
-    margin-bottom: 40px;
-  }
-
-  .welcome-block h1 {
-    font-size: clamp(28px, 3.4vw, 38px);
-    font-weight: 700;
-    letter-spacing: -0.5px;
-  }
-
-  .welcome-block h1 span { color: var(--light-blue); }
-
-  .welcome-block p {
-    margin-top: 8px;
-    color: var(--light-blue);
-    font-size: 14.5px;
-  }
-
-  /* team info strip — mirrors the login page's telemetry motif */
-  .info-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    padding: 18px 24px;
-    margin-bottom: 40px;
-  }
-
-  .info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .info-label {
-    font-family: var(--font-mono);
-    font-size: 10.5px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--light-blue);
-  }
-
-  .info-value {
-    font-family: var(--font-mono);
-    font-size: 15px;
-    color: var(--white);
-  }
-
-  .info-value.accent { color: var(--yellow); }
-
-  /* ---------- action cards ---------- */
-  .section-label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--light-blue);
-    margin-bottom: 16px;
-  }
-
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    margin-bottom: 44px;
-  }
-
-  .card {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 26px;
-    text-decoration: none;
-    color: var(--white);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: border-color 0.15s ease, transform 0.1s ease;
-  }
-
-  .card:hover {
-    border-color: var(--yellow);
-    transform: translateY(-2px);
-  }
-
-  .card-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    background: rgba(251, 215, 8, 0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-  }
-
-  .card h3 {
-    font-size: 17px;
-    font-weight: 700;
-  }
-
-  .card p {
-    font-size: 13px;
-    color: var(--light-blue);
-    line-height: 1.5;
-  }
-
-  .card-cta {
-    margin-top: auto;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--yellow);
-  }
-
-  /* robot profile summary */
-  .robot-summary {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 26px;
-  }
-
-  .robot-summary.empty {
-    text-align: center;
-    color: var(--light-blue);
-    font-size: 14px;
-  }
-
-  .robot-summary.empty a {
-    color: var(--yellow);
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .robot-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-  }
-
-  .robot-grid .info-label { margin-bottom: 4px; }
-  .robot-grid .info-value { font-family: var(--font-body); font-size: 14px; }
-
-  @media (max-width: 640px) {
-    .topbar { padding: 16px 20px; flex-wrap: wrap; gap: 10px; }
-    main { padding: 32px 20px 48px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-  }
-
-  /* ---------- toast notifications ---------- */
-  #toastContainer {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-left: 3px solid var(--yellow);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    font-family: var(--font-body);
-    color: var(--white);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    min-width: 220px;
-    max-width: 340px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: auto;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.toast-success { border-left-color: var(--yellow); }
-  .toast.toast-error { border-left-color: #ff6b6b; }
-
-  /* ---------- skeleton loaders ---------- */
-  .skeleton {
-    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
-    background-size: 400% 100%;
-    animation: skeleton-pulse 1.4s ease infinite;
-    border-radius: 6px;
-  }
-  @keyframes skeleton-pulse {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-  }
-  .skeleton-block { height: 14px; margin-bottom: 10px; }
-  .skeleton-block.w-60 { width: 60%; }
-  .skeleton-block.w-80 { width: 80%; }
-  .skeleton-block.w-40 { width: 40%; }
-  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
+  .welcome-block { margin-bottom: 34px; }
+  .welcome-block h1 { font-size: clamp(26px, 3.2vw, 34px); font-weight: 700; letter-spacing: -0.5px; }
+  .welcome-block h1 span { color: var(--text-muted); }
+  .welcome-block p { margin-top: 8px; color: var(--text-muted); font-size: 14.5px; }
 </style>
 </head>
 <body>
 
   <div id="toastContainer"></div>
 
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="eyebrow">Pit Wall</span>
-      <nav class="main-nav">
-        <a href="dashboard.html" class="active">Dashboard</a>
-        <a href="robot-profile.html">Robot</a>
-        <a href="scouting.html">Scouting</a>
-        <a href="schedule.html">Schedule</a>
-        <a href="chat.html">AI Chat</a>
-        <a href="engineering-notebook.html">Notebook</a>
-        <a href="pit-checklist.html">Checklist</a>
-        <a href="settings.html">Settings</a>
-      </nav>
-    </div>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <span class="team-chip" id="teamChip">Loading...</span>
-      <button class="signout-btn" onclick="handleSignOut()">Sign out</button>
+  <div class="app-shell">
+    <div id="navRoot"></div>
+
+    <div class="app-main">
+      <main class="page">
+        <div class="state-block" id="loadingState">
+          <div style="max-width:420px; margin:0 auto; text-align:left;">
+            <div class="skeleton skeleton-block w-40"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-block w-80"></div>
+            <div class="skeleton skeleton-block w-60"></div>
+          </div>
+        </div>
+
+        <div class="state-block hidden" id="errorState">
+          <p id="errorMessage">Something went wrong loading your dashboard.</p>
+          <p style="margin-top:10px;"><a href="index.html">Back to login</a></p>
+        </div>
+
+        <div id="dashboardContent" class="hidden">
+
+          <div class="welcome-block">
+            <h1>Welcome back, <span id="teamNameHeading">Team</span></h1>
+            <p>Here's your team's Pit Wall — check your robot profile or jump into the AI chat.</p>
+          </div>
+
+          <div class="info-strip">
+            <div class="info-item">
+              <span class="info-label">Team Number</span>
+              <span class="info-value accent" id="infoTeamNumber">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Team Name</span>
+              <span class="info-value" id="infoTeamName">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Competition</span>
+              <span class="info-value" id="infoCompetition">—</span>
+            </div>
+          </div>
+
+          <div class="section-label">Quick Actions</div>
+          <div class="card-grid">
+            <a href="robot-profile.html" class="action-card">
+              <div class="card-icon">🤖</div>
+              <h3>Robot Profile</h3>
+              <p>Log your drivetrain, game piece mechanism, and autonomous routine so the AI can give context-specific advice.</p>
+              <span class="cta">Open profile →</span>
+            </a>
+
+            <a href="chat.html" class="action-card">
+              <div class="card-icon">💬</div>
+              <h3>AI Chat</h3>
+              <p>Ask about strategy, your robot's setup, or general questions about the competition.</p>
+              <span class="cta">Start chatting →</span>
+            </a>
+
+            <a href="scouting.html" class="action-card">
+              <div class="card-icon">🔍</div>
+              <h3>Scouting</h3>
+              <p>Log what you see about other teams at events — drivetrain, scoring, driver skill, and notes.</p>
+              <span class="cta">Open scouting →</span>
+            </a>
+
+            <a href="events.html" class="action-card">
+              <div class="card-icon">🏆</div>
+              <h3>Events</h3>
+              <p>See past and upcoming events, and get AI analysis of where to improve — Driver, Programmer, Builder.</p>
+              <span class="cta">View events →</span>
+            </a>
+          </div>
+
+          <div class="section-label">Robot Snapshot</div>
+          <div id="robotSummary" class="card">
+            No robot profile yet — <a href="robot-profile.html">add one now</a> to get more tailored AI answers.
+          </div>
+
+        </div>
+      </main>
     </div>
   </div>
 
-  <main>
-    <div class="loading-state" id="loadingState">
-      <div style="max-width:420px; margin:0 auto; text-align:left;">
-        <div class="skeleton skeleton-block w-40"></div>
-        <div class="skeleton skeleton-card"></div>
-        <div class="skeleton skeleton-block w-80"></div>
-        <div class="skeleton skeleton-block w-60"></div>
-      </div>
-    </div>
-
-    <div class="error-state hidden" id="errorState">
-      <p id="errorMessage">Something went wrong loading your dashboard.</p>
-      <p style="margin-top:10px;"><a href="index.html">Back to login</a></p>
-    </div>
-
-    <div id="dashboardContent" class="hidden">
-
-      <div class="welcome-block">
-        <h1>Welcome back, <span id="teamNameHeading">Team</span></h1>
-        <p>Here's your team's Pit Wall — check your robot profile or jump into the AI chat.</p>
-      </div>
-
-      <div class="info-strip">
-        <div class="info-item">
-          <span class="info-label">Team Number</span>
-          <span class="info-value accent" id="infoTeamNumber">—</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Team Name</span>
-          <span class="info-value" id="infoTeamName">—</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Competition</span>
-          <span class="info-value" id="infoCompetition">—</span>
-        </div>
-      </div>
-
-      <div class="section-label">Quick Actions</div>
-      <div class="card-grid">
-        <a href="robot-profile.html" class="card">
-          <div class="card-icon">🤖</div>
-          <h3>Robot Profile</h3>
-          <p>Log your drivetrain, game piece mechanism, and autonomous routine so the AI can give context-specific advice.</p>
-          <span class="card-cta">Open profile →</span>
-        </a>
-
-        <a href="chat.html" class="card">
-          <div class="card-icon">💬</div>
-          <h3>AI Chat</h3>
-          <p>Ask about strategy, your robot's setup, or general questions about the competition.</p>
-          <span class="card-cta">Start chatting →</span>
-        </a>
-
-        <a href="scouting.html" class="card">
-          <div class="card-icon">🔍</div>
-          <h3>Scouting</h3>
-          <p>Log what you see about other teams at events — drivetrain, scoring, driver skill, and notes.</p>
-          <span class="card-cta">Open scouting →</span>
-        </a>
-      </div>
-
-      <div class="section-label">Robot Snapshot</div>
-      <div id="robotSummary" class="robot-summary empty">
-        No robot profile yet — <a href="robot-profile.html">add one now</a> to get more tailored AI answers.
-      </div>
-
-    </div>
-  </main>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc
-    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip } from "./assets/app.js";
 
-    // TODO: replace with your actual Firebase project config (same one as index.html)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
-      authDomain: "lb-dev-2444f.firebaseapp.com",
-      projectId: "lb-dev-2444f",
-      storageBucket: "lb-dev-2444f.firebasestorage.app",
-      messagingSenderId: "262360112421",
-      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
-    };
+    document.getElementById('navRoot').innerHTML = renderNav('dashboard');
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    wireNav(auth, signOut);
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -452,18 +123,14 @@
       errorState.classList.remove('hidden');
     }
 
-    // ---------- auth gate ----------
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // not logged in — bounce back to the login page
         window.location.href = 'index.html';
         return;
       }
 
       try {
-        const teamRef = doc(db, 'teams', user.uid);
-        const teamSnap = await getDoc(teamRef);
-
+        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account. Try signing up again, or contact your Pit Wall admin.');
           return;
@@ -471,19 +138,16 @@
 
         const team = teamSnap.data();
         populateDashboard(team);
-
-        // load robot profile too, if one exists yet
         loadRobotSummary(user.uid);
 
       } catch (err) {
         console.error(err);
-        showError('Couldn\'t load your team data. Check your connection and try again.');
+        showError("Couldn't load your team data. Check your connection and try again.");
       }
     });
 
     function populateDashboard(team) {
-      document.getElementById('teamChip').textContent =
-        `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+      setTeamChip(team);
       document.getElementById('teamNameHeading').textContent = team.teamName || 'Team';
       document.getElementById('infoTeamNumber').textContent = team.teamNumber || '—';
       document.getElementById('infoTeamName').textContent = team.teamName || '—';
@@ -493,71 +157,25 @@
       dashboardContent.classList.remove('hidden');
     }
 
-    // ---------- robot profile snapshot (shows once robot-profile.html exists and has saved data) ----------
     async function loadRobotSummary(uid) {
       try {
-        const robotRef = doc(db, 'robots', uid);
-        const robotSnap = await getDoc(robotRef);
+        const robotSnap = await getDoc(doc(db, 'robots', uid));
         const summaryEl = document.getElementById('robotSummary');
-
-        if (!robotSnap.exists()) return; // leave the default "no profile yet" message
+        if (!robotSnap.exists()) return;
 
         const robot = robotSnap.data();
-        summaryEl.classList.remove('empty');
         summaryEl.innerHTML = `
-          <div class="robot-grid">
-            <div class="info-item">
-              <span class="info-label">Drivetrain</span>
-              <span class="info-value">${escapeHtml(robot.drivetrain || 'Not set')}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Game Piece Mechanism</span>
-              <span class="info-value">${escapeHtml(robot.gamePieceMechanism || 'Not set')}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Autonomous Routine</span>
-              <span class="info-value">${escapeHtml(robot.autonomousRoutine || 'Not set')}</span>
-            </div>
+          <div class="entry-grid">
+            <div><span class="info-label">Drivetrain</span><span class="info-value">${escapeHtml(robot.drivetrain || 'Not set')}</span></div>
+            <div><span class="info-label">Game Piece Mechanism</span><span class="info-value">${escapeHtml(robot.gamePieceMechanism || 'Not set')}</span></div>
+            <div><span class="info-label">Autonomous Routine</span><span class="info-value">${escapeHtml(robot.autonomousRoutine || 'Not set')}</span></div>
           </div>
         `;
       } catch (err) {
-        // if this fails, just silently keep the default empty-state card
         console.error('Could not load robot summary', err);
       }
     }
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    // ---------- sign out ----------
-    window.handleSignOut = async function () {
-      try {
-        await signOut(auth);
-        window.location.href = 'index.html';
-      } catch (err) {
-        console.error(err);
-        alert('Couldn\'t sign out — try again.');
-      }
-    };
-  
-    // ---------- toast notifications (shared utility) ----------
-    window.showToast = function (message, type = 'success', duration = 3500) {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      requestAnimationFrame(() => toast.classList.add('show'));
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 250);
-      }, duration);
-    };
-</script>
+  </script>
 
 </body>
 </html>

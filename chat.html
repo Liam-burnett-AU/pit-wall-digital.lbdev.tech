@@ -5,484 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — AI Chat</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  :root {
-    --navy: #00295c;
-    --navy-deep: #001835;
-    --light-blue: #a3c1e7;
-    --yellow: #fbd708;
-    --white: #f4f7fb;
-    --panel-border: rgba(163, 193, 231, 0.18);
-    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
-  }
+  html, body { height: 100%; }
+  .app-shell { height: 100vh; }
+  .app-main.chat-shell { display: flex; flex-direction: column; height: 100vh; min-width: 0; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    height: 100%;
-    background: var(--navy-deep);
-    color: var(--white);
-    font-family: var(--font-body);
-    overflow: hidden;
-  }
-
-  body {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ---------- top bar ---------- */
-  .topbar {
+  .chat-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    row-gap: 12px;
+    row-gap: 10px;
     column-gap: 20px;
     padding: 16px 32px;
-    border-bottom: 1px solid var(--panel-border);
-    background: var(--navy);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
     flex-shrink: 0;
   }
+  .chat-header h1 { font-size: 15px; font-weight: 700; }
+  .context-indicator { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .context-indicator .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 5px var(--accent); }
 
-  .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-width: 0;
-    flex-wrap: wrap;
-  }
+  .chat-wrapper { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 24px 20px; }
+  .chat-inner { width: 100%; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
-  .back-link {
-    color: var(--light-blue);
-    text-decoration: none;
-    font-size: 13px;
-    font-family: var(--font-mono);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: color 0.15s ease;
-  }
-
-  .back-link:hover { color: var(--yellow); }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--yellow);
-    text-transform: uppercase;
-  }
-
-  .main-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-  }
-  .main-nav a {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    color: var(--light-blue);
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, background 0.15s ease;
-  }
-  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
-  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
-
-  .team-chip {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--light-blue);
-    border: 1px solid var(--panel-border);
-    padding: 5px 10px;
-    border-radius: 20px;
-  }
-
-  .context-indicator {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--light-blue);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .context-indicator .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--yellow);
-    box-shadow: 0 0 5px var(--yellow);
-  }
-
-  .download-chat-btn {
-    background: transparent;
-    border: 1px solid var(--panel-border);
-    color: var(--light-blue);
-    padding: 6px 12px;
-    border-radius: 7px;
-    font-size: 12px;
-    font-family: var(--font-mono);
-    cursor: pointer;
-    transition: border-color 0.15s ease, color 0.15s ease;
-  }
-  .download-chat-btn:hover { border-color: var(--yellow); color: var(--yellow); }
-  .download-chat-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  /* ---------- chat area ---------- */
-  .chat-wrapper {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    justify-content: center;
-    padding: 24px 20px;
-  }
-
-  .chat-inner {
-    width: 100%;
-    max-width: 760px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .empty-chat {
-    margin: auto;
-    text-align: center;
-    color: var(--light-blue);
-    max-width: 380px;
-  }
-
-  .empty-chat h2 {
-    font-size: 20px;
-    color: var(--white);
-    margin-bottom: 8px;
-  }
-
-  .empty-chat p {
-    font-size: 13.5px;
-    line-height: 1.6;
-  }
-
-  .suggestion-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 18px;
-  }
-
+  .empty-chat { margin: auto; text-align: center; color: var(--text-muted); max-width: 380px; }
+  .empty-chat h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+  .empty-chat p { font-size: 13.5px; line-height: 1.6; }
+  .suggestion-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
   .suggestion-chip {
-    font-size: 12px;
-    font-family: var(--font-mono);
-    color: var(--light-blue);
-    border: 1px solid var(--panel-border);
-    padding: 7px 12px;
-    border-radius: 20px;
-    cursor: pointer;
-    background: transparent;
-    transition: border-color 0.15s ease, color 0.15s ease;
+    font-size: 12px; font-family: var(--font-mono); color: var(--text-muted);
+    border: 1px solid var(--border); padding: 7px 12px; border-radius: 20px; cursor: pointer;
+    background: transparent; transition: border-color 0.15s ease, color 0.15s ease;
   }
+  .suggestion-chip:hover { border-color: var(--accent); color: var(--accent); }
 
-  .suggestion-chip:hover {
-    border-color: var(--yellow);
-    color: var(--yellow);
-  }
-
-  .message-row {
-    display: flex;
-  }
-
+  .message-row { display: flex; }
   .message-row.user { justify-content: flex-end; }
   .message-row.assistant { justify-content: flex-start; }
 
-  .bubble {
-    max-width: 78%;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 14.5px;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
+  .bubble { max-width: 78%; padding: 12px 16px; border-radius: 12px; font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; }
+  .bubble.user { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 3px; }
+  .bubble.assistant { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 3px; }
+  .bubble.assistant.loading { color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; }
+  .bubble.assistant.error { border-color: var(--danger-border); color: var(--danger); }
+  .bubble.assistant .katex { color: var(--text); font-size: 1.02em; }
 
-  .bubble.user {
-    background: var(--yellow);
-    color: var(--navy-deep);
-    border-bottom-right-radius: 3px;
-  }
-
-  .bubble.assistant {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    color: var(--white);
-    border-bottom-left-radius: 3px;
-  }
-
-  .bubble.assistant.loading {
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-    font-size: 13px;
-  }
-
-  .bubble.assistant.error {
-    border-color: rgba(255, 90, 90, 0.4);
-    color: #ffb4b4;
-  }
-
-  /* ---------- markdown content inside assistant bubbles ---------- */
-  .bubble.assistant p { margin: 0 0 10px; }
-  .bubble.assistant p:last-child { margin-bottom: 0; }
-
-  .bubble.assistant strong { color: var(--yellow); font-weight: 700; }
-  .bubble.assistant em { font-style: italic; color: var(--light-blue); }
-
-  .bubble.assistant ul,
-  .bubble.assistant ol {
-    margin: 0 0 10px 20px;
-  }
-  .bubble.assistant li { margin-bottom: 4px; }
-
-  .bubble.assistant h1,
-  .bubble.assistant h2,
-  .bubble.assistant h3 {
-    font-size: 15.5px;
-    font-weight: 700;
-    color: var(--yellow);
-    margin: 12px 0 8px;
-  }
-  .bubble.assistant h1:first-child,
-  .bubble.assistant h2:first-child,
-  .bubble.assistant h3:first-child { margin-top: 0; }
-
-  .bubble.assistant code {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    background: rgba(163, 193, 231, 0.12);
-    padding: 2px 5px;
-    border-radius: 4px;
-  }
-
-  .bubble.assistant pre {
-    background: var(--navy-deep);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    overflow-x: auto;
-    margin: 0 0 10px;
-  }
-
-  .bubble.assistant pre code {
-    background: none;
-    padding: 0;
-    font-size: 12.5px;
-    line-height: 1.5;
-  }
-
-  .bubble.assistant blockquote {
-    border-left: 3px solid var(--yellow);
-    padding-left: 12px;
-    margin: 0 0 10px;
-    color: var(--light-blue);
-  }
-
-  .bubble.assistant a {
-    color: var(--yellow);
-    text-decoration: underline;
-  }
-
-  .bubble.assistant table {
-    border-collapse: collapse;
-    margin: 0 0 10px;
-    font-size: 13px;
-  }
-  .bubble.assistant th,
-  .bubble.assistant td {
-    border: 1px solid var(--panel-border);
-    padding: 6px 10px;
-    text-align: left;
-  }
-
-  /* KaTeX inherits the app's dark theme text colour */
-  .bubble.assistant .katex { color: var(--white); font-size: 1.02em; }
-
-  /* ---------- input bar ---------- */
-  .input-bar {
-    flex-shrink: 0;
-    border-top: 1px solid var(--panel-border);
-    background: var(--navy);
-    padding: 16px 20px;
-    display: flex;
-    justify-content: center;
-  }
-
-  .input-inner {
-    width: 100%;
-    max-width: 760px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-  }
-
+  .input-bar { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--surface); padding: 16px 20px; display: flex; justify-content: center; }
+  .input-inner { width: 100%; max-width: 760px; display: flex; gap: 10px; align-items: flex-end; }
   #chatInput {
-    flex: 1;
-    resize: none;
-    min-height: 44px;
-    max-height: 140px;
-    padding: 12px 14px;
-    background: rgba(163, 193, 231, 0.06);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    color: var(--white);
-    font-size: 14px;
-    font-family: var(--font-body);
-    outline: none;
-    transition: border-color 0.15s ease;
+    flex: 1; resize: none; min-height: 44px; max-height: 140px;
+    padding: 12px 14px; background: rgba(163, 193, 231, 0.06); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 14px; font-family: var(--font-body);
+    outline: none; transition: border-color 0.15s ease;
   }
-
-  #chatInput:focus {
-    border-color: var(--yellow);
-  }
-
-  .send-btn {
-    background: var(--yellow);
-    color: var(--navy-deep);
-    border: none;
-    border-radius: 10px;
-    padding: 0 20px;
-    height: 44px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    font-family: var(--font-body);
-    transition: filter 0.15s ease;
-  }
-
-  .send-btn:hover { filter: brightness(1.08); }
-  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .full-loading, .full-error {
-    margin: auto;
-    text-align: center;
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-    font-size: 14px;
-  }
-
-  .full-error a { color: var(--yellow); }
-
-  .hidden { display: none !important; }
+  #chatInput:focus { border-color: var(--accent); }
+  .send-btn { height: 44px; padding: 0 20px; }
 
   @media (max-width: 640px) {
-    .topbar { padding: 14px 18px; }
+    .chat-header { padding: 14px 18px; }
     .context-indicator span:not(.dot) { display: none; }
   }
-
-  /* ---------- toast notifications ---------- */
-  #toastContainer {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-left: 3px solid var(--yellow);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    font-family: var(--font-body);
-    color: var(--white);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    min-width: 220px;
-    max-width: 340px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: auto;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.toast-success { border-left-color: var(--yellow); }
-  .toast.toast-error { border-left-color: #ff6b6b; }
-
-  /* ---------- skeleton loaders ---------- */
-  .skeleton {
-    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
-    background-size: 400% 100%;
-    animation: skeleton-pulse 1.4s ease infinite;
-    border-radius: 6px;
-  }
-  @keyframes skeleton-pulse {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-  }
-  .skeleton-block { height: 14px; margin-bottom: 10px; }
-  .skeleton-block.w-60 { width: 60%; }
-  .skeleton-block.w-80 { width: 80%; }
-  .skeleton-block.w-40 { width: 40%; }
-  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
 </style>
 </head>
 <body>
 
   <div id="toastContainer"></div>
 
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="eyebrow">Pit Wall // AI Chat</span>
+  <div class="app-shell">
+    <div id="navRoot"></div>
 
-      <nav class="main-nav">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="robot-profile.html">Robot</a>
-        <a href="scouting.html">Scouting</a>
-        <a href="schedule.html">Schedule</a>
-        <a href="chat.html" class="active">AI Chat</a>
-        <a href="engineering-notebook.html">Notebook</a>
-        <a href="pit-checklist.html">Checklist</a>
-        <a href="settings.html">Settings</a>
-      </nav>
-    </div>
-    <div style="display:flex; align-items:center; gap:16px;">
-      <span class="context-indicator" id="contextIndicator">
-        <span class="dot"></span><span>Loading context...</span>
-      </span>
-      <button class="download-chat-btn" id="downloadChatBtn" onclick="downloadChat()" title="Download this conversation">Download</button>
-      <span class="team-chip" id="teamChip">—</span>
-    </div>
-  </div>
-
-  <div class="chat-wrapper">
-    <div class="chat-inner" id="chatInner">
-      <div class="full-loading" id="fullLoading">
-        <div style="max-width:500px; margin:0 auto; text-align:left;">
-          <div class="skeleton skeleton-block w-40" style="margin-left:auto; width:35%;"></div>
-          <div class="skeleton skeleton-card" style="height:50px; width:70%;"></div>
-          <div class="skeleton skeleton-card" style="height:70px; width:60%; margin-left:auto;"></div>
+    <div class="app-main chat-shell">
+      <div class="chat-header">
+        <h1>Pit Wall // AI Chat</h1>
+        <div class="flex items-center gap-16">
+          <span class="context-indicator" id="contextIndicator"><span class="dot"></span><span>Loading context...</span></span>
+          <button type="button" class="btn btn-outline btn-sm" id="downloadChatBtn" title="Download this conversation">Download</button>
         </div>
       </div>
-      <div class="full-error hidden" id="fullError">
-        <p id="fullErrorMsg">Couldn't load chat.</p>
-        <p style="margin-top:8px;"><a href="dashboard.html">Back to dashboard</a></p>
-      </div>
-    </div>
-  </div>
 
-  <div class="input-bar">
-    <div class="input-inner">
-      <textarea id="chatInput" placeholder="Ask about strategy, your robot, or the competition..." rows="1"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+      <div class="chat-wrapper">
+        <div class="chat-inner" id="chatInner">
+          <div class="state-block" id="fullLoading">
+            <div style="max-width:500px; margin:0 auto; text-align:left;">
+              <div class="skeleton skeleton-block w-40" style="margin-left:auto; width:35%;"></div>
+              <div class="skeleton skeleton-card" style="height:50px; width:70%;"></div>
+              <div class="skeleton skeleton-card" style="height:70px; width:60%; margin-left:auto;"></div>
+            </div>
+          </div>
+          <div class="state-block hidden" id="fullError">
+            <p id="fullErrorMsg">Couldn't load chat.</p>
+            <p style="margin-top:8px;"><a href="dashboard.html">Back to dashboard</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-bar">
+        <div class="input-inner">
+          <textarea id="chatInput" placeholder="Ask about strategy, your robot, or the competition..." rows="1"></textarea>
+          <button type="button" class="btn btn-primary send-btn" id="sendBtn">Send</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -494,51 +118,23 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js";
 
-    // TODO: replace with your actual Firebase project config (same as index.html / dashboard.html)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
-      authDomain: "lb-dev-2444f.firebaseapp.com",
-      projectId: "lb-dev-2444f",
-      storageBucket: "lb-dev-2444f.firebasestorage.app",
-      messagingSenderId: "262360112421",
-      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
-    };
-
-    // Calls Groq through a Cloudflare Worker proxy — the Groq API key lives
-    // as a Worker secret, never in this file or sent to the browser.
-    // TODO: replace with your deployed Worker URL.
-    const GROQ_PROXY_URL = "https://groq-proxy.liamburnett40.workers.dev";
-    const GROQ_MODEL = "openai/gpt-oss-120b";
-
-    async function callGroq(messages, model) {
-      const res = await fetch(GROQ_PROXY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, model: model || GROQ_MODEL })
-      });
-
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => '');
-        let errMsg = `Worker returned status ${res.status}`;
-        try { errMsg = JSON.parse(errBody).error || errMsg; } catch (e) {}
-        throw new Error(errMsg);
-      }
-      return res.json();
-    }
+    document.getElementById('navRoot').innerHTML = renderNav('chat');
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    wireNav(auth, signOut);
 
     let currentUid = null;
-    let messages = []; // { role: 'user' | 'assistant', content: string, timestamp: string }
+    let messages = [];
     let teamContext = null;
     let robotContext = null;
-    let scoutingContext = []; // array of scouting entries for opponent teams
-    let notebookContext = []; // array of engineering notebook entries
+    let scoutingContext = [];
+    let notebookContext = [];
 
     const chatInner = document.getElementById('chatInner');
     const fullLoading = document.getElementById('fullLoading');
@@ -554,7 +150,6 @@
       fullError.classList.remove('hidden');
     }
 
-    // ---------- auth gate + initial load ----------
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = 'index.html';
@@ -578,12 +173,8 @@
 
         teamContext = teamSnap.data();
         robotContext = robotSnap.exists() ? robotSnap.data() : null;
-        // exclude entries marked "disregarded" (e.g. test entries) from what the AI sees
         scoutingContext = scoutingSnap.docs.map(d => d.data()).filter(e => !e.disregarded);
         notebookContext = notebookSnap.docs.map(d => d.data());
-
-        document.getElementById('teamChip').textContent =
-          `#${teamContext.teamNumber || '—'} ${teamContext.competition || 'FTC'}`;
 
         const contextParts = ['team'];
         if (robotContext) contextParts.push('robot profile');
@@ -591,20 +182,17 @@
         if (notebookContext.length) contextParts.push(`${notebookContext.length} notebook entr${notebookContext.length === 1 ? 'y' : 'ies'}`);
         contextIndicator.innerHTML = `<span class="dot"></span><span>Context: ${contextParts.join(' + ')}</span>`;
 
-        messages = chatSnap.exists() && Array.isArray(chatSnap.data().messages)
-          ? chatSnap.data().messages
-          : [];
+        messages = chatSnap.exists() && Array.isArray(chatSnap.data().messages) ? chatSnap.data().messages : [];
 
         fullLoading.classList.add('hidden');
         renderMessages();
 
       } catch (err) {
         console.error(err);
-        showFullError('Couldn\'t load your chat. Check your connection and try again.');
+        showFullError("Couldn't load your chat. Check your connection and try again.");
       }
     });
 
-    // ---------- rendering ----------
     function renderMessages() {
       chatInner.innerHTML = '';
 
@@ -614,12 +202,19 @@
             <h2>Ask Pit Wall anything</h2>
             <p>Strategy for your next match, engineering advice on your robot, or general questions about the competition — all with context from your team's profile.</p>
             <div class="suggestion-row">
-              <button class="suggestion-chip" onclick="useSuggestion(this)">What should we focus on in autonomous?</button>
-              <button class="suggestion-chip" onclick="useSuggestion(this)">How can we improve our drivetrain?</button>
-              <button class="suggestion-chip" onclick="useSuggestion(this)">How should we play against the teams we've scouted?</button>
+              <button type="button" class="suggestion-chip" data-suggestion="What should we focus on in autonomous?">What should we focus on in autonomous?</button>
+              <button type="button" class="suggestion-chip" data-suggestion="How can we improve our drivetrain?">How can we improve our drivetrain?</button>
+              <button type="button" class="suggestion-chip" data-suggestion="How should we play against the teams we've scouted?">How should we play against the teams we've scouted?</button>
             </div>
           </div>
         `;
+        chatInner.querySelectorAll('.suggestion-chip').forEach(btn => {
+          btn.addEventListener('click', () => {
+            chatInput.value = btn.dataset.suggestion;
+            chatInput.focus();
+            autoResize();
+          });
+        });
         return;
       }
 
@@ -630,9 +225,10 @@
         bubble.className = `bubble ${m.role}`;
 
         if (m.role === 'assistant') {
+          bubble.classList.add('md');
           bubble.innerHTML = renderMarkdown(m.content);
         } else {
-          bubble.textContent = m.content; // user text stays plain — no need to render their own input as markdown
+          bubble.textContent = m.content;
         }
 
         row.appendChild(bubble);
@@ -643,8 +239,7 @@
       scrollToBottom();
     }
 
-    // ---------- download whole chat ----------
-    window.downloadChat = function () {
+    document.getElementById('downloadChatBtn').addEventListener('click', () => {
       if (!messages || messages.length === 0) {
         alert('No messages to download yet.');
         return;
@@ -655,7 +250,6 @@
         : 'Pit Wall';
 
       const header = `${teamLabel}\nPit Wall AI Chat Export\nDownloaded: ${new Date().toLocaleString('en-AU')}\n${'='.repeat(50)}\n\n`;
-
       const body = messages.map(m => {
         const who = m.role === 'user' ? 'You' : 'Pit Wall AI';
         const when = m.timestamp ? new Date(m.timestamp).toLocaleString('en-AU') : '';
@@ -671,20 +265,7 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('Chat downloaded.', 'success');
-    };
-
-    // ---------- markdown + maths rendering ----------
-    function renderMarkdown(text) {
-      if (!window.marked || !window.DOMPurify) {
-        // libraries failed to load (e.g. offline) — fall back to plain text
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-      }
-      const rawHtml = window.marked.parse(text, { breaks: true });
-      return window.DOMPurify.sanitize(rawHtml);
-    }
+    });
 
     function renderMathInBubbles() {
       if (!window.renderMathInElement) return;
@@ -706,13 +287,6 @@
       requestAnimationFrame(() => { wrapper.scrollTop = wrapper.scrollHeight; });
     }
 
-    window.useSuggestion = function (btn) {
-      chatInput.value = btn.textContent;
-      chatInput.focus();
-      autoResize();
-    };
-
-    // ---------- input handling ----------
     function autoResize() {
       chatInput.style.height = 'auto';
       chatInput.style.height = Math.min(chatInput.scrollHeight, 140) + 'px';
@@ -725,7 +299,6 @@
       }
     });
 
-    // ---------- building context-aware system prompt ----------
     function buildSystemPrompt() {
       const teamLine = `Team ${teamContext.teamNumber || '?'} ("${teamContext.teamName || 'Unnamed team'}"), competing in ${teamContext.competition || 'FTC'}${teamContext.season ? ' — ' + teamContext.season : ''}.`;
 
@@ -770,8 +343,7 @@ Only discuss FTC — FRC support is not available in this app yet. If asked abou
 Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX math notation (inline with $...$, block equations with $$...$$) — both render properly in this chat, so use them where they aid clarity (e.g. gear ratios, scoring calculations).`;
     }
 
-    // ---------- sending a message ----------
-    window.sendMessage = async function () {
+    async function sendMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
 
@@ -793,21 +365,13 @@ Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX m
 
         const data = await callGroq(apiMessages);
         const replyText = data?.choices?.[0]?.message?.content;
-
-        if (!replyText) {
-          throw new Error('No reply content in API response');
-        }
+        if (!replyText) throw new Error('No reply content in API response');
 
         removeLoadingBubble();
-        const assistantMsg = { role: 'assistant', content: replyText, timestamp: new Date().toISOString() };
-        messages.push(assistantMsg);
+        messages.push({ role: 'assistant', content: replyText, timestamp: new Date().toISOString() });
         renderMessages();
 
-        // save the full conversation back to Firestore
-        await setDoc(doc(db, 'chatHistory', currentUid), {
-          messages,
-          updatedAt: new Date().toISOString()
-        });
+        await setDoc(doc(db, 'chatHistory', currentUid), { messages, updatedAt: new Date().toISOString() });
 
       } catch (err) {
         console.error('Chat error:', err);
@@ -818,7 +382,8 @@ Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX m
         chatInput.disabled = false;
         chatInput.focus();
       }
-    };
+    }
+    sendBtn.addEventListener('click', sendMessage);
 
     function addLoadingBubble() {
       const row = document.createElement('div');
@@ -830,8 +395,7 @@ Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX m
     }
 
     function removeLoadingBubble() {
-      const row = document.getElementById('loadingRow');
-      if (row) row.remove();
+      document.getElementById('loadingRow')?.remove();
     }
 
     function showErrorBubble(msg) {
@@ -839,27 +403,12 @@ Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX m
       row.className = 'message-row assistant';
       const bubble = document.createElement('div');
       bubble.className = 'bubble assistant error';
-      bubble.textContent = `Couldn't get a reply: ${msg}. Check that GROQ_PROXY_URL points to your deployed Cloudflare Worker, and check the Worker's logs in the Cloudflare dashboard.`;
+      bubble.textContent = `Couldn't get a reply: ${msg}. Try again in a moment.`;
       row.appendChild(bubble);
       chatInner.appendChild(row);
       scrollToBottom();
     }
-  
-    // ---------- toast notifications (shared utility) ----------
-    window.showToast = function (message, type = 'success', duration = 3500) {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      requestAnimationFrame(() => toast.classList.add('show'));
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 250);
-      }, duration);
-    };
-</script>
+  </script>
 
 </body>
 </html>

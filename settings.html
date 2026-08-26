@@ -4,525 +4,148 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Settings</title>
+<link rel="stylesheet" href="assets/style.css">
 <style>
-  :root {
-    --navy: #00295c;
-    --navy-deep: #001835;
-    --light-blue: #a3c1e7;
-    --yellow: #fbd708;
-    --white: #f4f7fb;
-    --red: #ff6b6b;
-    --panel-border: rgba(163, 193, 231, 0.18);
-    --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    min-height: 100%;
-    background: var(--navy-deep);
-    color: var(--white);
-    font-family: var(--font-body);
-  }
-
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 32px;
-    border-bottom: 1px solid var(--panel-border);
-    background: var(--navy);
-  }
-
-  .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .back-link {
-    color: var(--light-blue);
-    text-decoration: none;
-    font-size: 13px;
-    font-family: var(--font-mono);
-    transition: color 0.15s ease;
-  }
-  .back-link:hover { color: var(--yellow); }
-
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--yellow);
-    text-transform: uppercase;
-  }
-
-  .main-nav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow-x: auto;
-  }
-  .main-nav a {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    color: var(--light-blue);
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, background 0.15s ease;
-  }
-  .main-nav a:hover { color: var(--yellow); background: rgba(251, 215, 8, 0.08); }
-  .main-nav a.active { color: var(--yellow); border-bottom-color: var(--yellow); }
-
-  .team-chip {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--light-blue);
-    border: 1px solid var(--panel-border);
-    padding: 5px 10px;
-    border-radius: 20px;
-  }
-
-  main {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 48px 24px 80px;
-  }
-
-  .loading-state, .error-state {
-    text-align: center;
-    padding: 80px 20px;
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-    font-size: 14px;
-  }
-  .error-state a { color: var(--yellow); }
-  .hidden { display: none !important; }
-
-  h1.page-title {
-    font-size: clamp(26px, 3vw, 32px);
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 36px;
-  }
-
-  .settings-section {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 22px;
-  }
-
-  .settings-section.danger {
-    border-color: rgba(255, 107, 107, 0.35);
-  }
-
-  .settings-section h2 {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-
-  .settings-section h2.danger-title { color: var(--red); }
-
-  .settings-section .section-desc {
-    font-size: 13px;
-    color: var(--light-blue);
-    line-height: 1.5;
-    margin-bottom: 18px;
-  }
-
-  .field { margin-bottom: 16px; }
-  .field:last-child { margin-bottom: 0; }
-
-  .field label {
-    display: block;
-    font-size: 11.5px;
-    font-family: var(--font-mono);
-    letter-spacing: 0.5px;
-    color: var(--light-blue);
-    margin-bottom: 7px;
-    text-transform: uppercase;
-  }
-
-  .field input,
-  .field select {
-    width: 100%;
-    padding: 11px 13px;
-    background: rgba(163, 193, 231, 0.06);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    color: var(--white);
-    font-size: 14px;
-    font-family: var(--font-body);
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .field select option { background: var(--navy-deep); }
-
-  .field input:focus,
-  .field select:focus {
-    border-color: var(--yellow);
-    box-shadow: 0 0 0 3px rgba(251, 215, 8, 0.15);
-  }
-
-  .field input[readonly] {
-    color: var(--light-blue);
-    cursor: default;
-  }
-
-  .lookup-status {
-    margin-top: 7px;
-    font-family: var(--font-mono);
-    font-size: 11.5px;
-    color: var(--light-blue);
-    min-height: 14px;
-  }
-  .lookup-status.error { color: var(--red); }
-  .lookup-status.success { color: var(--yellow); }
-
-  .results-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    background: var(--navy-deep);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    margin-top: 4px;
-    overflow: hidden;
-    display: none;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
-  }
-  .results-dropdown.open { display: block; }
-
-  .result-item {
-    padding: 10px 14px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--panel-border);
-    transition: background 0.12s ease;
-  }
-  .result-item:last-child { border-bottom: none; }
-  .result-item:hover { background: rgba(251, 215, 8, 0.1); }
-
-  .result-number {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-    color: var(--yellow);
-    white-space: nowrap;
-  }
-  .result-name {
-    font-size: 13px;
-    color: var(--white);
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .result-empty {
-    padding: 12px 14px;
-    font-size: 12.5px;
-    color: var(--light-blue);
-    font-family: var(--font-mono);
-  }
-
-  .current-value {
-    font-family: var(--font-mono);
-    font-size: 13.5px;
-    color: var(--white);
-    margin-bottom: 16px;
-  }
-  .current-value span { color: var(--light-blue); }
-
-  .btn {
-    padding: 11px 20px;
-    border-radius: 8px;
-    font-size: 13.5px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: var(--font-body);
-    border: none;
-    transition: filter 0.15s ease, opacity 0.15s ease;
-  }
-
-  .btn-primary { background: var(--yellow); color: var(--navy-deep); }
-  .btn-primary:hover { filter: brightness(1.08); }
-
-  .btn-outline {
-    background: transparent;
-    border: 1px solid var(--panel-border);
-    color: var(--light-blue);
-  }
-  .btn-outline:hover { border-color: var(--yellow); color: var(--yellow); }
-
-  .btn-danger { background: var(--red); color: #2b0000; }
-  .btn-danger:hover { filter: brightness(1.08); }
-
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .status-msg {
-    margin-top: 12px;
-    font-size: 12.5px;
-    font-family: var(--font-mono);
-    display: none;
-  }
-  .status-msg.success { display: block; color: var(--yellow); }
-  .status-msg.error { display: block; color: var(--red); }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--panel-border);
-    margin: 18px 0;
-  }
-
-  .confirm-box {
-    background: rgba(255, 107, 107, 0.06);
-    border: 1px solid rgba(255, 107, 107, 0.3);
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 14px;
-  }
-
-  .confirm-box p {
-    font-size: 13px;
-    color: var(--white);
-    line-height: 1.5;
-    margin-bottom: 12px;
-  }
-
-  .confirm-actions {
-    display: flex;
-    gap: 10px;
-  }
-
-  @media (max-width: 640px) {
-    .topbar { padding: 14px 18px; }
-    main { padding: 32px 18px 60px; }
-  }
-
-  /* ---------- toast notifications ---------- */
-  #toastContainer {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    pointer-events: none;
-  }
-  .toast {
-    background: var(--navy);
-    border: 1px solid var(--panel-border);
-    border-left: 3px solid var(--yellow);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    font-family: var(--font-body);
-    color: var(--white);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    min-width: 220px;
-    max-width: 340px;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: auto;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
-  .toast.toast-success { border-left-color: var(--yellow); }
-  .toast.toast-error { border-left-color: #ff6b6b; }
-
-  /* ---------- skeleton loaders ---------- */
-  .skeleton {
-    background: linear-gradient(90deg, rgba(163,193,231,0.06) 25%, rgba(163,193,231,0.14) 37%, rgba(163,193,231,0.06) 63%);
-    background-size: 400% 100%;
-    animation: skeleton-pulse 1.4s ease infinite;
-    border-radius: 6px;
-  }
-  @keyframes skeleton-pulse {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-  }
-  .skeleton-block { height: 14px; margin-bottom: 10px; }
-  .skeleton-block.w-60 { width: 60%; }
-  .skeleton-block.w-80 { width: 80%; }
-  .skeleton-block.w-40 { width: 40%; }
-  .skeleton-card { height: 90px; border-radius: 12px; margin-bottom: 14px; }
+  h1.page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 30px; }
+  .settings-section { margin-bottom: 20px; }
+  .settings-section.danger { border-color: var(--danger-border); }
+  .settings-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .settings-section h2.danger-title { color: var(--danger); }
+  .settings-section .section-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
+  .current-value { font-family: var(--font-mono); font-size: 13.5px; margin-bottom: 16px; }
+  .current-value span { color: var(--text-muted); }
+  .confirm-box { background: var(--danger-soft); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 16px; margin-top: 14px; }
+  .confirm-box p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+  .confirm-actions { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
 
   <div id="toastContainer"></div>
 
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="eyebrow">Pit Wall // Settings</span>
+  <div class="app-shell">
+    <div id="navRoot"></div>
 
-      <nav class="main-nav">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="robot-profile.html">Robot</a>
-        <a href="scouting.html">Scouting</a>
-        <a href="schedule.html">Schedule</a>
-        <a href="chat.html">AI Chat</a>
-        <a href="engineering-notebook.html">Notebook</a>
-        <a href="pit-checklist.html">Checklist</a>
-        <a href="settings.html" class="active">Settings</a>
-      </nav>
+    <div class="app-main">
+      <main class="page narrow">
+        <div class="state-block" id="loadingState">
+          <div style="max-width:420px; margin:0 auto; text-align:left;">
+            <div class="skeleton skeleton-block w-40"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-block w-80"></div>
+            <div class="skeleton skeleton-block w-60"></div>
+          </div>
+        </div>
+
+        <div class="state-block hidden" id="errorState">
+          <p id="errorMessage">Something went wrong.</p>
+          <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+        </div>
+
+        <div id="settingsContent" class="hidden">
+          <h1 class="page-title">Settings</h1>
+
+          <div class="settings-section card">
+            <h2>Account</h2>
+            <p class="section-desc">Change your email or password. Both send a link to your inbox — nothing changes until you click it.</p>
+            <div class="current-value">Current email: <span id="currentEmail">—</span></div>
+
+            <div class="field">
+              <label for="newEmail">New email</label>
+              <input type="email" id="newEmail" placeholder="new@example.com">
+            </div>
+            <div class="field">
+              <label for="emailChangePassword">Current password (to confirm it's you)</label>
+              <input type="password" id="emailChangePassword" placeholder="••••••••">
+            </div>
+            <button type="button" class="btn btn-primary" id="changeEmailBtn">Send Verification Link</button>
+            <div class="status-msg" id="emailStatus"></div>
+
+            <hr class="divider">
+
+            <p class="section-desc" style="margin-bottom:12px;">Password reset sends a link to your current email address.</p>
+            <button type="button" class="btn btn-outline" id="resetPasswordBtn">Send Password Reset Email</button>
+            <div class="status-msg" id="passwordStatus"></div>
+          </div>
+
+          <div class="settings-section card">
+            <h2>Team Info</h2>
+            <p class="section-desc">Update your team's details. This is what the AI chat uses as context.</p>
+
+            <div class="field">
+              <label for="teamNumber">Team number</label>
+              <input type="text" id="teamNumber" placeholder="Start typing a team number..." inputmode="numeric" autocomplete="off">
+              <div class="lookup-status" id="lookupStatus"></div>
+              <div class="results-dropdown" id="resultsDropdown"></div>
+            </div>
+            <div class="field">
+              <label for="teamName">Team name</label>
+              <input type="text" id="teamName" placeholder="Select a team from the list above" readonly>
+            </div>
+            <div class="field">
+              <label for="teamCompetition">Competition</label>
+              <select id="teamCompetition">
+                <option value="FTC">FTC</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" id="saveTeamBtn">Save Team Info</button>
+            <div class="status-msg" id="teamStatus"></div>
+          </div>
+
+          <div class="settings-section card">
+            <h2>Chat History</h2>
+            <p class="section-desc">Permanently clears everything in your AI chat. Your team and robot profile aren't affected.</p>
+            <button type="button" class="btn btn-outline" id="clearChatShowBtn">Clear Chat History</button>
+            <div id="clearChatConfirm" class="confirm-box hidden">
+              <p>This deletes your entire chat history. This can't be undone.</p>
+              <div class="confirm-actions">
+                <button type="button" class="btn btn-danger solid" id="clearChatConfirmBtn">Yes, Clear It</button>
+                <button type="button" class="btn btn-outline" id="clearChatCancelBtn">Cancel</button>
+              </div>
+            </div>
+            <div class="status-msg" id="clearChatStatus"></div>
+          </div>
+
+          <div class="settings-section danger card">
+            <h2 class="danger-title">Delete Account</h2>
+            <p class="section-desc">Permanently deletes your account, team profile, robot profile, and chat history. This cannot be undone.</p>
+
+            <div class="field">
+              <label for="deleteAccountPassword">Current password (to confirm it's you)</label>
+              <input type="password" id="deleteAccountPassword" placeholder="••••••••">
+            </div>
+
+            <button type="button" class="btn btn-danger solid" id="deleteAccountShowBtn">Delete My Account</button>
+            <div id="deleteAccountConfirm" class="confirm-box hidden">
+              <p>Are you absolutely sure? Everything tied to your team will be permanently deleted.</p>
+              <div class="confirm-actions">
+                <button type="button" class="btn btn-danger solid" id="deleteAccountConfirmBtn">Yes, Delete Everything</button>
+                <button type="button" class="btn btn-outline" id="deleteAccountCancelBtn">Cancel</button>
+              </div>
+            </div>
+            <div class="status-msg" id="deleteAccountStatus"></div>
+          </div>
+
+        </div>
+      </main>
     </div>
-    <span class="team-chip" id="teamChip">—</span>
   </div>
-
-  <main>
-    <div class="loading-state" id="loadingState">
-      <div style="max-width:420px; margin:0 auto; text-align:left;">
-        <div class="skeleton skeleton-block w-40"></div>
-        <div class="skeleton skeleton-card"></div>
-        <div class="skeleton skeleton-block w-80"></div>
-        <div class="skeleton skeleton-block w-60"></div>
-      </div>
-    </div>
-
-    <div class="error-state hidden" id="errorState">
-      <p id="errorMessage">Something went wrong.</p>
-      <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
-    </div>
-
-    <div id="settingsContent" class="hidden">
-      <h1 class="page-title">Settings</h1>
-
-      <!-- ACCOUNT -->
-      <div class="settings-section">
-        <h2>Account</h2>
-        <p class="section-desc">Change your email or password. Both send a link to your inbox — nothing changes until you click it.</p>
-
-        <div class="current-value">Current email: <span id="currentEmail">—</span></div>
-
-        <div class="field">
-          <label for="newEmail">New email</label>
-          <input type="email" id="newEmail" placeholder="new@example.com">
-        </div>
-        <div class="field">
-          <label for="emailChangePassword">Current password (to confirm it's you)</label>
-          <input type="password" id="emailChangePassword" placeholder="••••••••">
-        </div>
-        <button class="btn btn-primary" id="changeEmailBtn" onclick="handleChangeEmail()">Send Verification Link</button>
-        <div class="status-msg" id="emailStatus"></div>
-
-        <hr class="divider">
-
-        <p class="section-desc" style="margin-bottom:12px;">Password reset sends a link to your current email address.</p>
-        <button class="btn btn-outline" id="resetPasswordBtn" onclick="handlePasswordReset()">Send Password Reset Email</button>
-        <div class="status-msg" id="passwordStatus"></div>
-      </div>
-
-      <!-- TEAM INFO -->
-      <div class="settings-section">
-        <h2>Team Info</h2>
-        <p class="section-desc">Update your team's details. This is what the AI chat uses as context.</p>
-
-        <div class="field" style="position: relative;">
-          <label for="teamNumber">Team number</label>
-          <input type="text" id="teamNumber" placeholder="Start typing a team number..." inputmode="numeric" autocomplete="off" oninput="onTeamSearchInput()">
-          <div class="lookup-status" id="lookupStatus"></div>
-          <div class="results-dropdown" id="resultsDropdown"></div>
-        </div>
-        <div class="field">
-          <label for="teamName">Team name</label>
-          <input type="text" id="teamName" placeholder="Select a team from the list above" readonly>
-        </div>
-        <div class="field">
-          <label for="teamCompetition">Competition</label>
-          <select id="teamCompetition">
-            <option value="FTC">FTC</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" onclick="handleSaveTeam()">Save Team Info</button>
-        <div class="status-msg" id="teamStatus"></div>
-      </div>
-
-      <!-- CHAT DATA -->
-      <div class="settings-section">
-        <h2>Chat History</h2>
-        <p class="section-desc">Permanently clears everything in your AI chat. Your team and robot profile aren't affected.</p>
-        <button class="btn btn-outline" onclick="showConfirm('clearChat')">Clear Chat History</button>
-        <div id="clearChatConfirm" class="confirm-box hidden">
-          <p>This deletes your entire chat history. This can't be undone.</p>
-          <div class="confirm-actions">
-            <button class="btn btn-danger" onclick="handleClearChat()">Yes, Clear It</button>
-            <button class="btn btn-outline" onclick="hideConfirm('clearChat')">Cancel</button>
-          </div>
-        </div>
-        <div class="status-msg" id="clearChatStatus"></div>
-      </div>
-
-      <!-- DANGER ZONE -->
-      <div class="settings-section danger">
-        <h2 class="danger-title">Delete Account</h2>
-        <p class="section-desc">Permanently deletes your account, team profile, robot profile, and chat history. This cannot be undone.</p>
-
-        <div class="field">
-          <label for="deleteAccountPassword">Current password (to confirm it's you)</label>
-          <input type="password" id="deleteAccountPassword" placeholder="••••••••">
-        </div>
-
-        <button class="btn btn-danger" onclick="showConfirm('deleteAccount')">Delete My Account</button>
-        <div id="deleteAccountConfirm" class="confirm-box hidden">
-          <p>Are you absolutely sure? Everything tied to your team will be permanently deleted.</p>
-          <div class="confirm-actions">
-            <button class="btn btn-danger" onclick="handleDeleteAccount()">Yes, Delete Everything</button>
-            <button class="btn btn-outline" onclick="hideConfirm('deleteAccount')">Cancel</button>
-          </div>
-        </div>
-        <div class="status-msg" id="deleteAccountStatus"></div>
-      </div>
-
-    </div>
-  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import {
-      getAuth,
-      onAuthStateChanged,
-      sendPasswordResetEmail,
-      verifyBeforeUpdateEmail,
-      reauthenticateWithCredential,
-      EmailAuthProvider,
-      deleteUser,
-      signOut
+      getAuth, onAuthStateChanged, sendPasswordResetEmail, verifyBeforeUpdateEmail,
+      reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc,
-      deleteDoc
-    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js";
 
-    // TODO: replace with your actual Firebase project config (same as your other pages)
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
-      authDomain: "lb-dev-2444f.firebaseapp.com",
-      projectId: "lb-dev-2444f",
-      storageBucket: "lb-dev-2444f.firebasestorage.app",
-      messagingSenderId: "262360112421",
-      appId: "1:262360112421:web:828d6f1ff00024a3be0ecc"
-    };
+    document.getElementById('navRoot').innerHTML = renderNav('settings');
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    wireNav(auth, signOut);
 
     let currentUser = null;
 
@@ -542,10 +165,9 @@
       const el = document.getElementById(id);
       el.textContent = text;
       el.className = 'status-msg ' + type;
-      showToast(text, type === 'success' ? 'success' : 'error');
+      toast(text, type === 'success' ? 'success' : 'error');
     }
 
-    // ---------- auth gate + load data ----------
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = 'index.html';
@@ -561,7 +183,7 @@
         }
         const team = teamSnap.data();
 
-        document.getElementById('teamChip').textContent = `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+        setTeamChip(team);
         document.getElementById('currentEmail').textContent = user.email || '—';
         document.getElementById('teamName').value = team.teamName || '';
         document.getElementById('teamNumber').value = team.teamNumber || '';
@@ -572,114 +194,23 @@
 
       } catch (err) {
         console.error(err);
-        showError('Couldn\'t load your settings. Check your connection and try again.');
+        showError("Couldn't load your settings. Check your connection and try again.");
       }
     });
 
-    // ---------- reauth helper ----------
     async function reauthenticate(password) {
       const credential = EmailAuthProvider.credential(currentUser.email, password);
       await reauthenticateWithCredential(currentUser, credential);
     }
 
-    // ---------- FTCScout live search (same pattern as signup) ----------
-    let searchDebounceTimer = null;
-
-    window.onTeamSearchInput = function () {
-      const dropdown = document.getElementById('resultsDropdown');
-      const lookupStatus = document.getElementById('lookupStatus');
-      const nameField = document.getElementById('teamName');
-
-      nameField.value = '';
-      lookupStatus.textContent = '';
-      lookupStatus.className = 'lookup-status';
-
-      clearTimeout(searchDebounceTimer);
-
-      const query = document.getElementById('teamNumber').value.trim();
-      if (!query) {
-        dropdown.classList.remove('open');
-        dropdown.innerHTML = '';
-        return;
-      }
-
-      searchDebounceTimer = setTimeout(() => runTeamSearch(query), 300);
-    };
-
-    async function runTeamSearch(query) {
-      const dropdown = document.getElementById('resultsDropdown');
-      const lookupStatus = document.getElementById('lookupStatus');
-
-      lookupStatus.textContent = 'Searching...';
-
-      try {
-        const res = await fetch(
-          `https://api.ftcscout.org/rest/v1/teams/search?searchText=${encodeURIComponent(query)}&limit=5`
-        );
-        if (!res.ok) throw new Error('Search failed (' + res.status + ')');
-
-        const teams = await res.json();
-        renderResults(teams);
-        lookupStatus.textContent = teams.length
-          ? `${teams.length} match${teams.length === 1 ? '' : 'es'} found`
-          : '';
-      } catch (err) {
-        dropdown.innerHTML = '';
-        dropdown.classList.remove('open');
-        lookupStatus.textContent = 'Couldn\'t reach the FTC team database. You can type the name manually.';
-        lookupStatus.className = 'lookup-status error';
-        document.getElementById('teamName').readOnly = false;
-      }
-    }
-
-    function renderResults(teams) {
-      const dropdown = document.getElementById('resultsDropdown');
-      dropdown.innerHTML = '';
-
-      if (!teams || teams.length === 0) {
-        dropdown.innerHTML = '<div class="result-empty">No matching FTC teams found.</div>';
-        dropdown.classList.add('open');
-        return;
-      }
-
-      teams.slice(0, 5).forEach((team) => {
-        const item = document.createElement('div');
-        item.className = 'result-item';
-        item.innerHTML = `
-          <span class="result-number">#${team.number}</span>
-          <span class="result-name">${escapeHtml(team.name || 'Unnamed team')}</span>
-        `;
-        item.addEventListener('click', () => selectTeam(team));
-        dropdown.appendChild(item);
-      });
-
-      dropdown.classList.add('open');
-    }
-
-    function selectTeam(team) {
-      document.getElementById('teamNumber').value = team.number;
-      document.getElementById('teamName').value = team.name || '';
-      document.getElementById('resultsDropdown').classList.remove('open');
-      document.getElementById('lookupStatus').textContent = `Selected: #${team.number} — ${team.name || 'Unnamed team'}`;
-      document.getElementById('lookupStatus').className = 'lookup-status success';
-    }
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    document.addEventListener('click', (e) => {
-      const wrapper = document.getElementById('teamNumber');
-      const dropdown = document.getElementById('resultsDropdown');
-      if (wrapper && dropdown && !wrapper.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('open');
-      }
+    wireTeamLookup({
+      numberInputId: 'teamNumber',
+      nameInputId: 'teamName',
+      statusId: 'lookupStatus',
+      dropdownId: 'resultsDropdown'
     });
 
-    // ---------- change email (sends verification link to NEW address) ----------
-    window.handleChangeEmail = async function () {
+    document.getElementById('changeEmailBtn').addEventListener('click', async () => {
       const newEmail = document.getElementById('newEmail').value.trim();
       const password = document.getElementById('emailChangePassword').value;
       const btn = document.getElementById('changeEmailBtn');
@@ -691,7 +222,6 @@
 
       btn.disabled = true;
       btn.textContent = 'Sending...';
-
       try {
         await reauthenticate(password);
         await verifyBeforeUpdateEmail(currentUser, newEmail);
@@ -704,14 +234,12 @@
         btn.disabled = false;
         btn.textContent = 'Send Verification Link';
       }
-    };
+    });
 
-    // ---------- password reset ----------
-    window.handlePasswordReset = async function () {
+    document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
       const btn = document.getElementById('resetPasswordBtn');
       btn.disabled = true;
       btn.textContent = 'Sending...';
-
       try {
         await sendPasswordResetEmail(auth, currentUser.email);
         setStatus('passwordStatus', `Reset link sent to ${currentUser.email}. Check your inbox.`, 'success');
@@ -722,59 +250,51 @@
         btn.disabled = false;
         btn.textContent = 'Send Password Reset Email';
       }
-    };
+    });
 
-    // ---------- save team info ----------
-    window.handleSaveTeam = async function () {
+    document.getElementById('saveTeamBtn').addEventListener('click', async () => {
       const teamName = document.getElementById('teamName').value.trim();
       const teamNumber = document.getElementById('teamNumber').value.trim();
       const competition = document.getElementById('teamCompetition').value;
 
       if (!teamName || !teamNumber) {
-        setStatus('teamStatus', 'Team name and number can\'t be empty.', 'error');
+        setStatus('teamStatus', "Team name and number can't be empty.", 'error');
         return;
       }
 
       try {
         await setDoc(doc(db, 'teams', currentUser.uid), {
-          teamName,
-          teamNumber,
-          competition,
-          updatedAt: new Date().toISOString()
+          teamName, teamNumber, competition, updatedAt: new Date().toISOString()
         }, { merge: true });
 
-        document.getElementById('teamChip').textContent = `#${teamNumber} ${competition}`;
+        setTeamChip({ teamNumber, competition });
         setStatus('teamStatus', 'Team info saved.', 'success');
       } catch (err) {
         console.error(err);
-        setStatus('teamStatus', 'Couldn\'t save — check your connection and try again.', 'error');
+        setStatus('teamStatus', "Couldn't save — check your connection and try again.", 'error');
       }
-    };
+    });
 
-    // ---------- confirm boxes ----------
-    window.showConfirm = function (which) {
-      document.getElementById(which + 'Confirm').classList.remove('hidden');
-    };
-    window.hideConfirm = function (which) {
-      document.getElementById(which + 'Confirm').classList.add('hidden');
-    };
+    function showConfirm(which) { document.getElementById(which + 'Confirm').classList.remove('hidden'); }
+    function hideConfirm(which) { document.getElementById(which + 'Confirm').classList.add('hidden'); }
 
-    // ---------- clear chat history ----------
-    window.handleClearChat = async function () {
+    document.getElementById('clearChatShowBtn').addEventListener('click', () => showConfirm('clearChat'));
+    document.getElementById('clearChatCancelBtn').addEventListener('click', () => hideConfirm('clearChat'));
+    document.getElementById('clearChatConfirmBtn').addEventListener('click', async () => {
       try {
         await deleteDoc(doc(db, 'chatHistory', currentUser.uid));
         hideConfirm('clearChat');
         setStatus('clearChatStatus', 'Chat history cleared.', 'success');
       } catch (err) {
         console.error(err);
-        setStatus('clearChatStatus', 'Couldn\'t clear chat history — check your connection and try again.', 'error');
+        setStatus('clearChatStatus', "Couldn't clear chat history — check your connection and try again.", 'error');
       }
-    };
+    });
 
-    // ---------- delete account ----------
-    window.handleDeleteAccount = async function () {
+    document.getElementById('deleteAccountShowBtn').addEventListener('click', () => showConfirm('deleteAccount'));
+    document.getElementById('deleteAccountCancelBtn').addEventListener('click', () => hideConfirm('deleteAccount'));
+    document.getElementById('deleteAccountConfirmBtn').addEventListener('click', async () => {
       const password = document.getElementById('deleteAccountPassword').value;
-
       if (!password) {
         setStatus('deleteAccountStatus', 'Enter your password to confirm.', 'error');
         return;
@@ -782,56 +302,31 @@
 
       try {
         await reauthenticate(password);
-
-        // delete Firestore data first, then the Auth account itself
         await Promise.allSettled([
           deleteDoc(doc(db, 'teams', currentUser.uid)),
           deleteDoc(doc(db, 'robots', currentUser.uid)),
           deleteDoc(doc(db, 'chatHistory', currentUser.uid))
         ]);
-
         await deleteUser(currentUser);
-
         window.location.href = 'index.html';
       } catch (err) {
         console.error(err);
         setStatus('deleteAccountStatus', friendlyAuthError(err), 'error');
       }
-    };
+    });
 
-    // ---------- shared error messages ----------
     function friendlyAuthError(err) {
       const code = err && err.code;
       switch (code) {
         case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          return 'Password is incorrect.';
-        case 'auth/requires-recent-login':
-          return 'For security, please log out and back in, then try again.';
-        case 'auth/email-already-in-use':
-          return 'That email is already in use by another account.';
-        case 'auth/invalid-email':
-          return 'That doesn\'t look like a valid email address.';
-        default:
-          return code ? `Something went wrong (${code}).` : ((err && err.message) || 'Something went wrong. Try again.');
+        case 'auth/invalid-credential': return 'Password is incorrect.';
+        case 'auth/requires-recent-login': return 'For security, please log out and back in, then try again.';
+        case 'auth/email-already-in-use': return 'That email is already in use by another account.';
+        case 'auth/invalid-email': return "That doesn't look like a valid email address.";
+        default: return code ? `Something went wrong (${code}).` : ((err && err.message) || 'Something went wrong. Try again.');
       }
     }
-  
-    // ---------- toast notifications (shared utility) ----------
-    window.showToast = function (message, type = 'success', duration = 3500) {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      requestAnimationFrame(() => toast.classList.add('show'));
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 250);
-      }, duration);
-    };
-</script>
+  </script>
 
 </body>
 </html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Events</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .event-card { margin-bottom: 14px; }
+  .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .event-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .event-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+  .event-venue { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+
+  .record-strip {
+    display: flex; gap: 22px; margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .record-item { display: flex; flex-direction: column; gap: 3px; }
+  .record-value { font-family: var(--font-mono); font-size: 15px; }
+  .record-value.accent { color: var(--accent); }
+
+  .analysis-actions { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .analysis-hint { font-size: 12px; color: var(--text-muted); }
+
+  .match-mini-list { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .match-mini {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: 12.5px; font-family: var(--font-mono); padding: 7px 10px;
+    border-radius: var(--radius-sm); background: rgba(163, 193, 231, 0.05);
+  }
+  .match-mini .result { font-weight: 700; }
+  .match-mini .result.win { color: var(--success); }
+  .match-mini .result.loss { color: var(--danger); }
+  .match-mini .result.tie { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer"></div>
+
+  <div class="app-shell">
+    <div id="navRoot"></div>
+
+    <div class="app-main">
+      <main class="page">
+        <div class="state-block" id="loadingState">
+          <div style="max-width:420px; margin:0 auto; text-align:left;">
+            <div class="skeleton skeleton-block w-40"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
+        </div>
+
+        <div class="state-block hidden" id="errorState">
+          <p id="errorMessage">Something went wrong.</p>
+          <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+        </div>
+
+        <div id="pageContent" class="hidden">
+          <div class="page-head">
+            <div>
+              <h1>Events</h1>
+              <p>Every event your team is registered for. For events you've already competed at, get an AI breakdown of where to improve — split by Driver, Programmer, and Builder.</p>
+            </div>
+          </div>
+
+          <div class="section-label">Upcoming</div>
+          <div id="upcomingList"></div>
+
+          <div class="section-label">Past</div>
+          <div id="pastList"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Markdown rendering for AI analysis (same libraries as chat.html) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import {
+      firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
+      ftcEventsFetch, FTC_EVENTS_SEASON, callGroq
+    } from "./assets/app.js";
+
+    document.getElementById('navRoot').innerHTML = renderNav('events');
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    wireNav(auth, signOut);
+
+    let currentUid = null;
+    let teamNumber = null;
+    let robotContext = null;
+    let scoutingContext = [];
+    let notebookContext = [];
+
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const pageContent = document.getElementById('pageContent');
+    const upcomingList = document.getElementById('upcomingList');
+    const pastList = document.getElementById('pastList');
+
+    function showError(msg) {
+      loadingState.classList.add('hidden');
+      pageContent.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorState.classList.remove('hidden');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUid = user.uid;
+
+      try {
+        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        if (!teamSnap.exists()) {
+          showError('No team profile found for this account.');
+          return;
+        }
+        const team = teamSnap.data();
+        teamNumber = team.teamNumber;
+        setTeamChip(team);
+
+        if (!teamNumber) {
+          showError('No team number set — add it in Settings first.');
+          return;
+        }
+
+        const [robotSnap, scoutingSnap, notebookSnap] = await Promise.all([
+          getDoc(doc(db, 'robots', user.uid)),
+          getDocs(query(collection(db, 'scouting', user.uid, 'entries'), orderBy('createdAt', 'desc'), limit(30))),
+          getDocs(query(collection(db, 'engineeringNotebook', user.uid, 'entries'), orderBy('date', 'desc'), limit(20)))
+        ]);
+        robotContext = robotSnap.exists() ? robotSnap.data() : null;
+        scoutingContext = scoutingSnap.docs.map(d => d.data()).filter(e => !e.disregarded);
+        notebookContext = notebookSnap.docs.map(d => d.data());
+
+        await loadEvents();
+
+      } catch (err) {
+        console.error(err);
+        showError("Couldn't load your team data. Check your connection and try again.");
+      }
+    });
+
+    async function loadEvents() {
+      try {
+        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/events?teamNumber=${teamNumber}`);
+        const events = data.events || [];
+
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+
+        if (events.length === 0) {
+          upcomingList.innerHTML = '<div class="entries-empty">No registered events found for this team this season yet.</div>';
+          pastList.innerHTML = '<div class="entries-empty">Nothing here yet.</div>';
+          return;
+        }
+
+        const today = new Date();
+        const upcoming = [];
+        const past = [];
+
+        events.forEach(e => {
+          const endDate = new Date(e.dateEnd || e.dateStart);
+          if (endDate >= today) upcoming.push(e); else past.push(e);
+        });
+
+        upcoming.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
+        past.sort((a, b) => new Date(b.dateStart) - new Date(a.dateStart));
+
+        renderUpcoming(upcoming);
+        renderPast(past);
+
+      } catch (err) {
+        console.error(err);
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+        upcomingList.innerHTML = `<div class="entries-empty">Couldn't load events — check your FTC Events API credentials and connection.<br>(${escapeHtml(err.message)})</div>`;
+        pastList.innerHTML = '';
+      }
+    }
+
+    function formatDateRange(e) {
+      const start = e.dateStart ? new Date(e.dateStart) : null;
+      const end = e.dateEnd ? new Date(e.dateEnd) : null;
+      if (!start) return 'Date TBD';
+      const startStr = start.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (!end || end.toDateString() === start.toDateString()) return startStr;
+      const endStr = end.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `${startStr} – ${endStr}`;
+    }
+
+    function venueLine(e) {
+      return [e.venue, e.city, e.stateprov, e.country].filter(Boolean).join(', ');
+    }
+
+    function renderUpcoming(events) {
+      if (events.length === 0) {
+        upcomingList.innerHTML = '<div class="entries-empty">No upcoming events on the calendar right now.</div>';
+        return;
+      }
+      upcomingList.innerHTML = events.map(e => `
+        <div class="event-card card">
+          <div class="event-head">
+            <div>
+              <div class="event-name">${escapeHtml(e.name)}</div>
+              <div class="event-meta">${formatDateRange(e)}</div>
+              ${venueLine(e) ? `<div class="event-venue">${escapeHtml(venueLine(e))}</div>` : ''}
+            </div>
+            <span class="badge">Upcoming</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderPast(events) {
+      if (events.length === 0) {
+        pastList.innerHTML = '<div class="entries-empty">No past events yet — once you\'ve competed somewhere, it\'ll show up here with AI analysis.</div>';
+        return;
+      }
+      pastList.innerHTML = '';
+      events.forEach(e => {
+        const card = document.createElement('div');
+        card.className = 'event-card card';
+        card.dataset.eventCode = e.code;
+        card.innerHTML = `
+          <div class="event-head">
+            <div>
+              <div class="event-name">${escapeHtml(e.name)}</div>
+              <div class="event-meta">${formatDateRange(e)}</div>
+              ${venueLine(e) ? `<div class="event-venue">${escapeHtml(venueLine(e))}</div>` : ''}
+            </div>
+            <span class="badge accent">Past</span>
+          </div>
+          <div class="record-strip" id="record-${cssId(e.code)}">
+            <div class="record-item"><span class="info-label">Record</span><span class="record-value">Loading…</span></div>
+          </div>
+          <div class="match-mini-list" id="matches-${cssId(e.code)}"></div>
+          <div class="analysis-actions">
+            <button type="button" class="btn btn-primary btn-sm" data-action="analyse">Get AI Performance Analysis</button>
+            <span class="analysis-hint">Uses match results, scouting notes, and your notebook entries.</span>
+          </div>
+          <div id="analysis-${cssId(e.code)}"></div>
+        `;
+        pastList.appendChild(card);
+
+        card.querySelector('[data-action="analyse"]').addEventListener('click', (ev) => runAnalysis(e, ev.target));
+
+        loadEventResults(e);
+        loadCachedAnalysis(e);
+      });
+    }
+
+    function cssId(code) {
+      return String(code).replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
+    async function loadEventResults(e) {
+      const recordEl = document.getElementById(`record-${cssId(e.code)}`);
+      const matchesEl = document.getElementById(`matches-${cssId(e.code)}`);
+      try {
+        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/matches/${e.code}?teamNumber=${teamNumber}`);
+        const matches = (data.matches || []).filter(m => m.scoreRedFinal != null || m.scoreBlueFinal != null);
+
+        if (matches.length === 0) {
+          recordEl.innerHTML = `<div class="record-item"><span class="info-label">Record</span><span class="record-value">No results published</span></div>`;
+          e._results = { matches: [], wins: 0, losses: 0, ties: 0 };
+          return;
+        }
+
+        let wins = 0, losses = 0, ties = 0;
+        const summaries = matches.map(m => {
+          const teams = m.teams || [];
+          const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
+          const myColour = mine && (mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue';
+          const myScore = myColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
+          const oppScore = myColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
+          let result = 'tie';
+          if (myScore > oppScore) { result = 'win'; wins++; }
+          else if (myScore < oppScore) { result = 'loss'; losses++; }
+          else { ties++; }
+          return { matchNumber: m.matchNumber, result, myScore, oppScore };
+        });
+
+        recordEl.innerHTML = `
+          <div class="record-item"><span class="info-label">Record</span><span class="record-value accent">${wins}-${losses}-${ties}</span></div>
+          <div class="record-item"><span class="info-label">Matches Played</span><span class="record-value">${matches.length}</span></div>
+        `;
+
+        matchesEl.innerHTML = summaries.map(s => `
+          <div class="match-mini">
+            <span>Match ${s.matchNumber ?? '?'}</span>
+            <span>${s.myScore ?? '—'} – ${s.oppScore ?? '—'}</span>
+            <span class="result ${s.result}">${s.result.toUpperCase()}</span>
+          </div>
+        `).join('');
+
+        e._results = { matches: summaries, wins, losses, ties };
+
+      } catch (err) {
+        console.error('Match results error:', err);
+        recordEl.innerHTML = `<div class="record-item"><span class="info-label">Record</span><span class="record-value">Couldn't load results</span></div>`;
+        e._results = null;
+      }
+    }
+
+    async function loadCachedAnalysis(e) {
+      try {
+        const snap = await getDoc(doc(db, 'eventAnalysis', currentUid, 'events', e.code));
+        if (snap.exists()) renderAnalysis(e.code, snap.data());
+      } catch (err) {
+        console.error("Couldn't load cached analysis", err);
+      }
+    }
+
+    function renderAnalysis(eventCode, data) {
+      const el = document.getElementById(`analysis-${cssId(eventCode)}`);
+      if (!el) return;
+      const when = data.generatedAt ? new Date(data.generatedAt).toLocaleString('en-AU') : '';
+      el.innerHTML = `
+        <div class="ai-block">
+          <span class="ai-label"><span class="ai-dot"></span>AI Performance Analysis</span>
+          <div class="ai-body md">${renderMarkdown(data.analysis)}</div>
+          ${when ? `<div class="generated-at">Generated ${when}</div>` : ''}
+        </div>
+      `;
+    }
+
+    const EVENT_ANALYSIS_SYSTEM_PROMPT = `You are analysing a FIRST Tech Challenge (FTC) team's performance at one specific competition event, to help them improve before their next one. Use only the match results, robot details, scouting notes, and notebook entries given to you — don't invent details.
+
+Structure your response with these headings, in this order:
+**Driver** — how well the team likely executed on the field (consistency, scoring rate implied by scores, any patterns across matches). One thing that went well, one concrete thing to work on.
+**Programmer** — what the results suggest about autonomous reliability and code/control performance. One thing that went well, one concrete thing to work on.
+**Builder** — what the results and notebook suggest about the robot's mechanical reliability and design. One thing that went well, one concrete thing to work on.
+**Overall Takeaways** — 2-3 sentences summarising the single highest-priority improvement before the next event.
+
+Be specific and reference the actual data provided (scores, win/loss pattern, notes) rather than generic advice. If data for a section is too thin to say anything specific, say so briefly rather than padding it out. Keep the whole response under 350 words.`;
+
+    function buildEventPrompt(e) {
+      const lines = [];
+      lines.push(`Event: ${e.name} (${formatDateRange(e)})`);
+
+      if (e._results && e._results.matches.length) {
+        lines.push(`Record: ${e._results.wins}-${e._results.losses}-${e._results.ties} (W-L-T) across ${e._results.matches.length} matches.`);
+        lines.push('Match-by-match results:');
+        e._results.matches.forEach(m => {
+          lines.push(`- Match ${m.matchNumber ?? '?'}: ${m.result.toUpperCase()}, ${m.myScore ?? '—'} to ${m.oppScore ?? '—'}`);
+        });
+      } else {
+        lines.push('No published match results available for this event.');
+      }
+
+      lines.push('');
+      lines.push(robotContext
+        ? `Robot: drivetrain ${robotContext.drivetrain || 'not specified'}; game piece mechanism ${robotContext.gamePieceMechanism || 'not specified'}; autonomous routine ${robotContext.autonomousRoutine || 'not specified'}. Notes: ${robotContext.notes || 'none'}.`
+        : 'No robot profile has been filled in yet.');
+
+      if (notebookContext.length) {
+        lines.push('');
+        lines.push('Recent engineering notebook entries (may or may not be from this specific event window):');
+        notebookContext.slice(0, 8).forEach(n => {
+          lines.push(`- ${n.date}: "${n.title}" — ${n.task}${n.reflection ? ' | Reflection: ' + n.reflection : ''}`);
+        });
+      }
+
+      if (scoutingContext.length) {
+        lines.push('');
+        lines.push(`Team has ${scoutingContext.length} scouted opponent entries logged (context only, not this team's own performance).`);
+      }
+
+      return lines.join('\n');
+    }
+
+    async function runAnalysis(e, btn) {
+      const el = document.getElementById(`analysis-${cssId(e.code)}`);
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Analysing...';
+      el.innerHTML = `
+        <div class="ai-block loading">
+          <span class="ai-label"><span class="ai-dot"></span>AI Performance Analysis</span>
+          <div class="ai-body">Reviewing match results and notes from this event...</div>
+        </div>
+      `;
+
+      try {
+        const prompt = buildEventPrompt(e);
+        const data = await callGroq([
+          { role: 'system', content: EVENT_ANALYSIS_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]);
+        const analysis = data?.choices?.[0]?.message?.content;
+        if (!analysis) throw new Error('No analysis returned from the AI.');
+
+        const generatedAt = new Date().toISOString();
+        await setDoc(doc(db, 'eventAnalysis', currentUid, 'events', e.code), {
+          eventName: e.name, eventCode: e.code, analysis, generatedAt
+        });
+
+        renderAnalysis(e.code, { analysis, generatedAt });
+        toast('Analysis ready.', 'success');
+        btn.textContent = 'Regenerate Analysis';
+
+      } catch (err) {
+        console.error('Event analysis error:', err);
+        el.innerHTML = `
+          <div class="ai-block">
+            <span class="ai-label"><span class="ai-dot"></span>AI Performance Analysis</span>
+            <div class="ai-body">Couldn't get an analysis: ${escapeHtml(err.message)}. Try again in a moment.</div>
+          </div>
+        `;
+        toast("Couldn't generate analysis.", 'error');
+        btn.textContent = originalLabel;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>
