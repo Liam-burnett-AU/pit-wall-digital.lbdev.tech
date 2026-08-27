@@ -34,6 +34,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // Cached AI per-match feedback, one doc per match
+    match /matchAnalysis/{uid}/matches/{matchId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Scouting entries — opponent-team notes logged by this team
     match /scouting/{uid}/entries/{entryId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;

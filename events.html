@@ -134,6 +134,7 @@
     let currentPastEvent = null;
     let currentView = 'ourMatches';
     let viewToken = 0;
+    let matchModalToken = 0;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -513,6 +514,7 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     async function openMatchModal(event, match) {
+      const myModalToken = ++matchModalToken;
       const teams = match.teams || [];
       const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
       const blue = teams.filter(t => (t.station || '').toLowerCase().includes('blue'));
@@ -530,6 +532,11 @@
           </div>
         </div>
 
+        <div class="ai-block loading" id="matchFeedbackBlock">
+          <span class="ai-label"><span class="ai-dot"></span>AI Match Feedback</span>
+          <div class="ai-body md" id="matchFeedbackBody">Generating feedback...</div>
+        </div>
+
         <div class="modal-subhead">Full Match Data (FTC Events API)</div>
         ${renderKeyValueList(match, { skip: ['teams'] })}
 
@@ -537,6 +544,8 @@
         <div id="modalScoutStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
       `;
       document.getElementById('modalOverlay').classList.remove('hidden');
+
+      loadMatchFeedback(event, match, myModalToken);
 
       const scoutEl = document.getElementById('modalScoutStats');
       const allTeams = [...red, ...blue];
@@ -558,6 +567,116 @@
       } catch (err) {
         console.error('FTCScout match stats error:', err);
         scoutEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout stats.</p>';
+      }
+    }
+
+    // ==================== PER-MATCH AI FEEDBACK ====================
+
+    function matchDocId(event, match) {
+      return `${event.code}_${match.tournamentLevel || 'qual'}_${match.matchNumber}`;
+    }
+
+    function buildMatchSystemPrompt() {
+      return `You are analysing a single FIRST Tech Challenge (FTC) match for Team ${teamNumber}. Use only the match data, robot info, and scouting notes provided — don't invent details.
+
+If Team ${teamNumber} played in this match: give a short, specific comment (3-5 sentences) on how they likely performed based on their alliance's score, one thing that probably went well, and one thing to check on going forward. Address them directly as "your team".
+
+If Team ${teamNumber} did NOT play in this match: give a brief scouting-style summary (3-5 sentences) of what the score suggests about each alliance's strength — useful context for future scouting or alliance selection.
+
+Be specific and reference the actual scores and team numbers given. Keep it concise — this is a quick per-match note, not a full report.`;
+    }
+
+    function buildMatchPrompt(event, match, ourStation) {
+      const teams = match.teams || [];
+      const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
+      const blue = teams.filter(t => (t.station || '').toLowerCase().includes('blue'));
+      const played = match.scoreRedFinal != null || match.scoreBlueFinal != null;
+
+      const lines = [];
+      lines.push(`Event: ${event.name}`);
+      lines.push(`Match ${match.matchNumber ?? '?'} (${match.tournamentLevel || 'qual'})`);
+      lines.push(`Red alliance: ${red.map(t => '#' + t.teamNumber).join(', ') || 'unknown'}`);
+      lines.push(`Blue alliance: ${blue.map(t => '#' + t.teamNumber).join(', ') || 'unknown'}`);
+      lines.push(played ? `Score: Red ${match.scoreRedFinal} — Blue ${match.scoreBlueFinal}` : 'Score: not published yet');
+      lines.push(ourStation
+        ? `Team ${teamNumber} played on the ${ourStation} alliance in this match.`
+        : `Team ${teamNumber} did not play in this match.`);
+
+      if (robotContext && ourStation) {
+        lines.push(`Our robot: drivetrain ${robotContext.drivetrain || 'not specified'}; game piece mechanism ${robotContext.gamePieceMechanism || 'not specified'}; autonomous routine ${robotContext.autonomousRoutine || 'not specified'}.`);
+      }
+
+      const involvedNumbers = [...red, ...blue].map(t => String(t.teamNumber));
+      const relevantScouting = scoutingContext.filter(s => involvedNumbers.includes(String(s.scoutedTeamNumber)));
+      if (relevantScouting.length) {
+        lines.push('Scouting notes on teams in this match:');
+        relevantScouting.forEach(s => {
+          const parts = [
+            s.drivetrainObserved && `drivetrain: ${s.drivetrainObserved}`,
+            s.scoringCapability && `scoring: ${s.scoringCapability}`,
+            s.driverRating && `driver skill: ${s.driverRating}/5`,
+            s.notes
+          ].filter(Boolean);
+          lines.push(`- Team ${s.scoutedTeamNumber}: ${parts.join('; ')}`);
+        });
+      }
+
+      return lines.join('\n');
+    }
+
+    async function loadMatchFeedback(event, match, myModalToken) {
+      const docId = matchDocId(event, match);
+
+      const applyResult = (analysis) => {
+        if (myModalToken !== matchModalToken) return; // a different match modal is open now
+        const block = document.getElementById('matchFeedbackBlock');
+        const body = document.getElementById('matchFeedbackBody');
+        if (!block || !body) return;
+        block.classList.remove('loading');
+        body.innerHTML = renderMarkdown(analysis);
+      };
+
+      const applyError = (message) => {
+        if (myModalToken !== matchModalToken) return;
+        const body = document.getElementById('matchFeedbackBody');
+        if (body) body.textContent = message;
+      };
+
+      try {
+        const cached = await getDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId));
+        if (cached.exists()) {
+          applyResult(cached.data().analysis);
+          return;
+        }
+      } catch (err) {
+        console.error('Match feedback cache read error:', err);
+      }
+
+      try {
+        const teams = match.teams || [];
+        const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
+        const ourStation = mine ? ((mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue') : null;
+
+        const data = await callGroq([
+          { role: 'system', content: buildMatchSystemPrompt() },
+          { role: 'user', content: buildMatchPrompt(event, match, ourStation) }
+        ]);
+        const analysis = data?.choices?.[0]?.message?.content;
+        if (!analysis) throw new Error('No feedback returned.');
+
+        await setDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId), {
+          eventCode: event.code,
+          matchNumber: match.matchNumber,
+          tournamentLevel: match.tournamentLevel || 'qual',
+          analysis,
+          generatedAt: new Date().toISOString()
+        });
+
+        applyResult(analysis);
+
+      } catch (err) {
+        console.error('Match feedback error:', err);
+        applyError(`Couldn't get feedback: ${err.message}`);
       }
     }
 
