@@ -73,6 +73,19 @@
             </div>
           </div>
 
+          <div class="entries-section">
+            <h2>AI-Generated Notebook</h2>
+            <p class="section-desc">Pulls together your robot profile, every logged session, and your notebook photo feedback into one judge-ready engineering notebook write-up.</p>
+            <div class="form-card card">
+              <div class="flex items-center gap-12 flex-wrap">
+                <button type="button" class="btn btn-primary" id="generateNotebookBtn">Generate Engineering Notebook</button>
+                <button type="button" class="btn btn-outline btn-sm hidden" id="downloadGeneratedBtn">Download</button>
+              </div>
+              <div class="status-msg" id="generateNotebookStatus"></div>
+            </div>
+            <div id="generatedNotebookCard"></div>
+          </div>
+
           <div class="form-card card">
             <h2>New Entry</h2>
             <div class="form-row">
@@ -165,6 +178,10 @@
     let currentUid = null;
     let currentModalEntryId = null;
     let currentModalPhotoId = null;
+    let allEntries = [];
+    let allPhotos = [];
+    let teamContext = null;
+    let lastGeneratedNotebook = '';
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -193,7 +210,8 @@
           showError('No team profile found for this account.');
           return;
         }
-        setTeamChip(teamSnap.data());
+        teamContext = teamSnap.data();
+        setTeamChip(teamContext);
 
         loadingState.classList.add('hidden');
         pageContent.classList.remove('hidden');
@@ -201,6 +219,7 @@
         await loadEntries();
         await loadPhotos();
         await renderFinalDoc();
+        await loadGeneratedNotebook();
 
       } catch (err) {
         console.error(err);
@@ -283,6 +302,8 @@
         const q = query(collection(db, 'engineeringNotebook', currentUid, 'entries'), orderBy('date', 'desc'));
         const snap = await getDocs(q);
 
+        allEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
         if (snap.empty) {
           list.innerHTML = '<div class="entries-empty">No entries yet — log your first session above.</div>';
           return;
@@ -297,14 +318,18 @@
             <div class="entry-head">
               <div>
                 <div class="entry-title">${escapeHtml(e.title)}</div>
-                <div class="entry-meta">${escapeHtml(e.date)}${e.aiFeedback ? ' · AI feedback ready' : ' · Getting feedback...'}</div>
+                <div class="entry-meta">${escapeHtml(e.date)}</div>
               </div>
               <button type="button" class="btn btn-outline btn-sm" data-action="delete">Delete</button>
             </div>
             <div>
               <span class="info-label">What we did</span>
-              <div class="info-value">${escapeHtml(truncate(e.task, 140))}</div>
+              <div class="info-value">${escapeHtml(truncate(e.task, 200))}</div>
             </div>
+            ${e.aiFeedback
+              ? `<div class="ai-block"><span class="ai-label"><span class="ai-dot"></span>AI Feedback</span><div class="ai-body md">${renderMarkdown(e.aiFeedback)}</div></div>`
+              : `<div class="ai-block loading"><span class="ai-label"><span class="ai-dot"></span>AI Feedback</span><div class="ai-body">Generating feedback...</div></div>`
+            }
           `;
           card.addEventListener('click', (ev) => {
             if (ev.target.closest('[data-action="delete"]')) return;
@@ -450,6 +475,8 @@
       try {
         const q = query(collection(db, 'notebookPhotos', currentUid, 'photos'), orderBy('uploadedAt', 'desc'));
         const snap = await getDocs(q);
+
+        allPhotos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         if (snap.empty) {
           grid.innerHTML = '<div class="entries-empty" style="grid-column:1/-1;">No photos uploaded yet.</div>';
@@ -663,6 +690,149 @@
         card.innerHTML = '<div class="entries-empty">Couldn\'t load the final document.</div>';
       }
     }
+
+    // ==================== AI-GENERATED FULL NOTEBOOK ====================
+
+    const FULL_NOTEBOOK_SYSTEM_PROMPT = `You are helping a FIRST Tech Challenge team assemble a complete Engineering Notebook write-up from their logged session data. Engineering notebooks are judged on: clear documentation of the design process, genuine reflection (not just results), organisation, and evidence of iteration.
+
+Using ONLY the data provided, write a well-organised notebook with these sections, using Markdown headings:
+1. **Team & Robot Overview** — team info and the current robot design.
+2. **Build Season Journal** — walk through the logged sessions in date order as flowing notebook-style writing (not just repeating the raw notes verbatim), drawing connections between entries where relevant (e.g. "after discovering X, the team changed...").
+3. **Design Iterations & Key Decisions** — the significant design decisions visible in the entries, and why they were made.
+4. **Reflections & Next Steps** — a closing summary of what the team learned and what's still to improve.
+
+Don't invent information that isn't in the data. If very little data is available for a section, say so honestly in a sentence rather than padding it out with generic filler.`;
+
+    function buildFullNotebookPrompt(team, robot, entries, photos) {
+      const lines = [];
+      lines.push(`Team ${team.teamNumber || '?'} — "${team.teamName || 'Unnamed team'}" (${team.competition || 'FTC'})`);
+      lines.push('');
+      lines.push(robot
+        ? `Robot: drivetrain ${robot.drivetrain || 'not specified'}; game piece mechanism ${robot.gamePieceMechanism || 'not specified'}; autonomous routine ${robot.autonomousRoutine || 'not specified'}. Notes: ${robot.notes || 'none'}.`
+        : 'No robot profile has been filled in yet.');
+
+      // chronological order for a journal read — oldest first
+      const chronological = [...entries].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+      lines.push('');
+      if (chronological.length === 0) {
+        lines.push('No engineering notebook entries have been logged yet.');
+      } else {
+        // keep the prompt a sane size — for a very long history, keep the
+        // earliest and most recent sessions rather than the whole thing
+        const MAX_ENTRIES = 30;
+        let toInclude = chronological;
+        let omittedNote = '';
+        if (chronological.length > MAX_ENTRIES) {
+          const head = chronological.slice(0, 15);
+          const tail = chronological.slice(-15);
+          toInclude = head.concat(tail);
+          omittedNote = `\n[...${chronological.length - 30} earlier sessions omitted for length...]\n`;
+        }
+
+        lines.push(`Logged sessions, in date order (${chronological.length} total):`);
+        toInclude.forEach((e, i) => {
+          if (omittedNote && i === 15) lines.push(omittedNote);
+          lines.push(`\n### ${e.date} — ${e.title}`);
+          lines.push(`What we did: ${e.task}`);
+          if (e.reflection) lines.push(`Reflection: ${e.reflection}`);
+        });
+      }
+
+      const reviewed = photos.filter(p => p.aiFeedback);
+      if (photos.length) {
+        lines.push('');
+        lines.push(`${photos.length} physical notebook page photo(s) uploaded${reviewed.length ? `, ${reviewed.length} with AI review already done` : ''}.`);
+      }
+
+      return lines.join('\n');
+    }
+
+    async function loadGeneratedNotebook() {
+      try {
+        const snap = await getDoc(doc(db, 'generatedNotebook', currentUid));
+        if (snap.exists()) renderGeneratedNotebook(snap.data());
+      } catch (err) {
+        console.error("Couldn't load generated notebook", err);
+      }
+    }
+
+    function renderGeneratedNotebook(data) {
+      const card = document.getElementById('generatedNotebookCard');
+      const when = data.generatedAt ? new Date(data.generatedAt).toLocaleString('en-AU') : '';
+      card.innerHTML = `
+        <div class="card">
+          <div class="md">${renderMarkdown(data.content)}</div>
+          ${when ? `<div class="generated-at" style="margin-top:14px; font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint);">Generated ${when}</div>` : ''}
+        </div>
+      `;
+      lastGeneratedNotebook = data.content;
+      document.getElementById('downloadGeneratedBtn').classList.remove('hidden');
+      document.getElementById('generateNotebookBtn').textContent = 'Regenerate Notebook';
+    }
+
+    document.getElementById('generateNotebookBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('generateNotebookBtn');
+      const status = document.getElementById('generateNotebookStatus');
+      const card = document.getElementById('generatedNotebookCard');
+      const originalLabel = btn.textContent;
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      status.textContent = '';
+      status.className = 'status-msg';
+      card.innerHTML = `
+        <div class="ai-block loading">
+          <span class="ai-label"><span class="ai-dot"></span>AI-Generated Notebook</span>
+          <div class="ai-body">Reading your robot profile, sessions, and photo feedback, and writing your notebook...</div>
+        </div>
+      `;
+
+      try {
+        const robotSnap = await getDoc(doc(db, 'robots', currentUid));
+        const robot = robotSnap.exists() ? robotSnap.data() : null;
+
+        const prompt = buildFullNotebookPrompt(teamContext, robot, allEntries, allPhotos);
+
+        const data = await callGroq([
+          { role: 'system', content: FULL_NOTEBOOK_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]);
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error('No notebook content returned.');
+
+        const generatedAt = new Date().toISOString();
+        await setDoc(doc(db, 'generatedNotebook', currentUid), { content, generatedAt });
+
+        renderGeneratedNotebook({ content, generatedAt });
+        status.textContent = 'Notebook generated.';
+        status.className = 'status-msg success';
+        toast('Notebook generated.', 'success');
+
+      } catch (err) {
+        console.error('Notebook generation error:', err);
+        card.innerHTML = `<div class="entries-empty">Couldn't generate the notebook: ${escapeHtml(err.message)}. Try again in a moment.</div>`;
+        status.textContent = "Couldn't generate — check your connection and try again.";
+        status.className = 'status-msg error';
+        toast("Couldn't generate notebook.", 'error');
+        btn.textContent = originalLabel;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('downloadGeneratedBtn').addEventListener('click', () => {
+      if (!lastGeneratedNotebook) return;
+      const blob = new Blob([lastGeneratedNotebook], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pit-wall-engineering-notebook-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   </script>
 
 </body>

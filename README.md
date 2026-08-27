@@ -13,7 +13,7 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 - **Schedule** — pulls your team's match schedule for the current season straight from FIRST's official FTC Events API.
 - **Events** — every event your team is registered for, past and upcoming, across multiple seasons. Pick a past event to see your record, browse **Our Matches**, **All Matches**, or the full **Teams** list, click into any match or team for a popup with everything both the FTC Events API and FTCScout API know about it, and generate AI feedback — a whole-event breakdown by Driver/Programmer/Builder, plus a quick AI comment on any individual match.
 - **AI Chat** — ask questions about strategy, your robot, or the competition; the assistant is given your team, robot, scouting, and notebook data as context. Supports Markdown and LaTeX.
-- **Engineering Notebook** — log session entries and get instant AI feedback on each one, upload photos of physical notebook pages for AI feedback, or upload a finished PDF/Word notebook for a holistic AI review.
+- **Engineering Notebook** — log session entries and get instant AI feedback on each one (shown right in the list, no need to open anything), upload photos of physical notebook pages for AI feedback, upload a finished PDF/Word notebook for a holistic AI review, or have the AI pull your robot profile and every logged session together into a complete, judge-ready notebook write-up you can download.
 - **Pit Checklist** — a customisable pre-competition checklist.
 - **Settings** — manage your account, team info, chat history, and account deletion.
 
