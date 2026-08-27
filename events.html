@@ -624,7 +624,12 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
       return lines.join('\n');
     }
 
-    async function loadMatchFeedback(event, match, myModalToken) {
+    // Serialises the actual Groq calls for per-match feedback — clicking
+    // through several matches quickly queues them one after another instead
+    // of firing a burst of concurrent requests at the Worker.
+    let matchFeedbackQueue = Promise.resolve();
+
+    function loadMatchFeedback(event, match, myModalToken) {
       const docId = matchDocId(event, match);
 
       const applyResult = (analysis) => {
@@ -639,45 +644,58 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
       const applyError = (message) => {
         if (myModalToken !== matchModalToken) return;
         const body = document.getElementById('matchFeedbackBody');
-        if (body) body.textContent = message;
+        if (!body) return;
+        body.innerHTML = '';
+        body.append(message + ' ');
+        const retryBtn = document.createElement('button');
+        retryBtn.type = 'button';
+        retryBtn.className = 'btn btn-outline btn-sm';
+        retryBtn.textContent = 'Retry';
+        retryBtn.addEventListener('click', () => {
+          body.textContent = 'Generating feedback...';
+          loadMatchFeedback(event, match, myModalToken);
+        });
+        body.appendChild(retryBtn);
       };
 
-      try {
-        const cached = await getDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId));
-        if (cached.exists()) {
-          applyResult(cached.data().analysis);
-          return;
+      matchFeedbackQueue = matchFeedbackQueue.then(async () => {
+        try {
+          const cached = await getDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId));
+          if (cached.exists()) {
+            applyResult(cached.data().analysis);
+            return;
+          }
+        } catch (err) {
+          console.error('Match feedback cache read error:', err);
         }
-      } catch (err) {
-        console.error('Match feedback cache read error:', err);
-      }
 
-      try {
-        const teams = match.teams || [];
-        const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
-        const ourStation = mine ? ((mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue') : null;
+        try {
+          const teams = match.teams || [];
+          const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
+          const ourStation = mine ? ((mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue') : null;
 
-        const data = await callGroq([
-          { role: 'system', content: buildMatchSystemPrompt() },
-          { role: 'user', content: buildMatchPrompt(event, match, ourStation) }
-        ]);
-        const analysis = data?.choices?.[0]?.message?.content;
-        if (!analysis) throw new Error('No feedback returned.');
+          const data = await callGroq([
+            { role: 'system', content: buildMatchSystemPrompt() },
+            { role: 'user', content: buildMatchPrompt(event, match, ourStation) }
+          ]);
+          const analysis = data?.choices?.[0]?.message?.content;
+          if (!analysis) throw new Error('No feedback returned.');
 
-        await setDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId), {
-          eventCode: event.code,
-          matchNumber: match.matchNumber,
-          tournamentLevel: match.tournamentLevel || 'qual',
-          analysis,
-          generatedAt: new Date().toISOString()
-        });
+          await setDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId), {
+            eventCode: event.code,
+            matchNumber: match.matchNumber,
+            tournamentLevel: match.tournamentLevel || 'qual',
+            analysis,
+            generatedAt: new Date().toISOString()
+          });
 
-        applyResult(analysis);
+          applyResult(analysis);
 
-      } catch (err) {
-        console.error('Match feedback error:', err);
-        applyError(`Couldn't get feedback: ${err.message}`);
-      }
+        } catch (err) {
+          console.error('Match feedback error:', err);
+          applyError(`Couldn't get feedback: ${err.message}.`);
+        }
+      });
     }
 
     async function openTeamModal(event, team) {
