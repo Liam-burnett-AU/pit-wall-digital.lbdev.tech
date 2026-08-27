@@ -456,6 +456,23 @@
       });
     }
 
+    // Badge showing whether OUR team won/lost/tied this match — blank if
+    // our team wasn't in it, or it hasn't been played yet.
+    function ourResultBadge(m) {
+      const teams = m.teams || [];
+      const played = m.scoreRedFinal != null || m.scoreBlueFinal != null;
+      const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
+      if (!mine || !played) return '';
+
+      const ourColour = (mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue';
+      const ourScore = ourColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
+      const oppScore = ourColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
+
+      if (ourScore > oppScore) return '<span class="badge success" style="margin-left:8px;">Win</span>';
+      if (ourScore < oppScore) return '<span class="badge danger" style="margin-left:8px;">Loss</span>';
+      return '<span class="badge" style="margin-left:8px;">Tie</span>';
+    }
+
     function matchRowHtml(m, idx) {
       const teams = m.teams || [];
       const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
@@ -467,7 +484,7 @@
       return `
         <div class="list-row" data-match-index="${idx}">
           <div>
-            <div class="primary">Match ${m.matchNumber ?? '?'} <span class="faint" style="font-weight:400;">(${escapeHtml(m.tournamentLevel || 'qual')})</span></div>
+            <div class="primary">Match ${m.matchNumber ?? '?'} <span class="faint" style="font-weight:400;">(${escapeHtml(m.tournamentLevel || 'qual')})</span>${ourResultBadge(m)}</div>
             <div class="secondary">${escapeHtml(teamsStr)}</div>
           </div>
           <div class="secondary">${escapeHtml(scoreStr)}</div>
@@ -521,7 +538,7 @@
       const played = match.scoreRedFinal != null || match.scoreBlueFinal != null;
 
       document.getElementById('modalBody').innerHTML = `
-        <div class="modal-title">Match ${match.matchNumber ?? '?'} — ${escapeHtml(match.tournamentLevel || 'Qualification')}</div>
+        <div class="modal-title">Match ${match.matchNumber ?? '?'} — ${escapeHtml(match.tournamentLevel || 'Qualification')}${ourResultBadge(match)}</div>
         <div class="modal-subtitle">${escapeHtml(event.name)} · ${formatDateRange(event)}</div>
 
         <div class="modal-section">
