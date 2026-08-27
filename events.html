@@ -87,7 +87,7 @@
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
-      ftcEventsFetch, FTC_EVENTS_SEASON, callGroq
+      ftcEventsFetch, fetchTeamEventsAcrossSeasons, callGroq
     } from "./assets/app.js";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
@@ -158,14 +158,13 @@
 
     async function loadEvents() {
       try {
-        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/events?teamNumber=${teamNumber}`);
-        const events = data.events || [];
+        const events = await fetchTeamEventsAcrossSeasons(teamNumber);
 
         loadingState.classList.add('hidden');
         pageContent.classList.remove('hidden');
 
         if (events.length === 0) {
-          upcomingList.innerHTML = '<div class="entries-empty">No registered events found for this team this season yet.</div>';
+          upcomingList.innerHTML = '<div class="entries-empty">No registered events found for this team yet.</div>';
           pastList.innerHTML = '<div class="entries-empty">Nothing here yet.</div>';
           return;
         }
@@ -273,7 +272,7 @@
       const recordEl = document.getElementById(`record-${cssId(e.code)}`);
       const matchesEl = document.getElementById(`matches-${cssId(e.code)}`);
       try {
-        const data = await ftcEventsFetch(`/${FTC_EVENTS_SEASON}/matches/${e.code}?teamNumber=${teamNumber}`);
+        const data = await ftcEventsFetch(`/${e._season}/matches/${e.code}?teamNumber=${teamNumber}`);
         const matches = (data.matches || []).filter(m => m.scoreRedFinal != null || m.scoreBlueFinal != null);
 
         if (matches.length === 0) {

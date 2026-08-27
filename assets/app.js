@@ -75,6 +75,40 @@ export async function ftcEventsFetch(path) {
   return res.json();
 }
 
+// The FTC Events API scopes everything to a single season, so a team's
+// event history lives across several past `/{season}/events` calls, not
+// one. This fetches the current season plus this many prior ones and
+// merges them — each returned event carries a `_season` field so callers
+// know which season's endpoints (matches, rankings, ...) to use for it.
+export const FTC_EVENTS_SEASONS_LOOKBACK = 5;
+
+export async function fetchTeamEventsAcrossSeasons(teamNumber, seasonsBack = FTC_EVENTS_SEASONS_LOOKBACK) {
+  const currentSeason = parseInt(FTC_EVENTS_SEASON, 10);
+  const seasons = Array.from({ length: seasonsBack }, (_, i) => currentSeason - i);
+
+  const results = await Promise.allSettled(
+    seasons.map(season =>
+      ftcEventsFetch(`/${season}/events?teamNumber=${teamNumber}`).then(data => ({ season, events: data.events || [] }))
+    )
+  );
+
+  const merged = [];
+  let anyFulfilled = false;
+  results.forEach((r) => {
+    if (r.status === 'fulfilled') {
+      anyFulfilled = true;
+      r.value.events.forEach(e => merged.push({ ...e, _season: r.value.season }));
+    }
+  });
+
+  if (!anyFulfilled) {
+    // every season request failed — surface the first error rather than silently returning nothing
+    throw results[0].reason;
+  }
+
+  return merged;
+}
+
 export async function callGroq(messages, model) {
   const res = await fetch(GROQ_PROXY_URL, {
     method: 'POST',
