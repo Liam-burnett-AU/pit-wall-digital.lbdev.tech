@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Team profile — created at signup, keyed by the user's own uid.
+    match /teams/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Robot profile
+    match /robots/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // AI chat history
+    match /chatHistory/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Pit checklist
+    match /pitChecklist/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Final engineering notebook document upload (metadata + AI feedback —
+    // the file itself lives on Cloudinary)
+    match /notebookFinal/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Cached AI event-performance analysis, one doc per past event
+    match /eventAnalysis/{uid}/events/{eventCode} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Scouting entries — opponent-team notes logged by this team
+    match /scouting/{uid}/entries/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Engineering notebook entries
+    match /engineeringNotebook/{uid}/entries/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Notebook page photo metadata (image files live on Cloudinary)
+    match /notebookPhotos/{uid}/photos/{photoId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Deny anything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
