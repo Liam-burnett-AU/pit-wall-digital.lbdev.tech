@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Robot Profile</title>
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <style>
   form { display: flex; flex-direction: column; gap: 22px; }
   .actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
@@ -79,7 +79,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=2";
 
     document.getElementById('navRoot').innerHTML = renderNav('robot');
 

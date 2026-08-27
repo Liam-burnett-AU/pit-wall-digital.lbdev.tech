@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Events</title>
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <style>
   .event-card { margin-bottom: 14px; }
   .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
@@ -88,7 +88,7 @@
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
       ftcEventsFetch, fetchTeamEventsAcrossSeasons, callGroq
-    } from "./assets/app.js";
+    } from "./assets/app.js?v=2";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
 
