@@ -44,6 +44,53 @@ export function renderMarkdown(text) {
   return window.DOMPurify.sanitize(window.marked.parse(text, { breaks: true }));
 }
 
+function humanizeKey(key) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/_/g, ' ')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
+
+function formatKeyValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return null;
+    return value.map(v => (v && typeof v === 'object' ? JSON.stringify(v) : v)).join(', ');
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value).filter(([, v]) => v !== null && v !== undefined && v !== '');
+    if (entries.length === 0) return null;
+    return entries.map(([k, v]) => `${humanizeKey(k)}: ${v && typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ');
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
+
+// Renders an arbitrary API response object as a grid of label/value pairs —
+// used for the "everything the API returned" sections of the match/team
+// modals, so new fields FIRST or FTCScout add just show up automatically
+// instead of needing a hardcoded field list per endpoint.
+export function renderKeyValueList(obj, opts = {}) {
+  const skip = new Set(opts.skip || []);
+  if (!obj || typeof obj !== 'object') {
+    return '<p class="faint" style="font-size:13px;">No data available.</p>';
+  }
+
+  const rows = Object.entries(obj)
+    .filter(([k]) => !skip.has(k) && !k.startsWith('_'))
+    .map(([k, v]) => [humanizeKey(k), formatKeyValue(v)])
+    .filter(([, v]) => v !== null);
+
+  if (rows.length === 0) {
+    return '<p class="faint" style="font-size:13px;">No data available.</p>';
+  }
+
+  return `<div class="kv-grid">${rows.map(([k, v]) => `
+    <div class="kv-item"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>
+  `).join('')}</div>`;
+}
+
 export function toast(message, type = 'success', duration = 3500) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -60,9 +107,23 @@ export function toast(message, type = 'success', duration = 3500) {
 
 // ===== Third-party API calls =====
 
+// FTCScout — community-run stats (OPR/DPR/CCWM, team profiles). Public,
+// CORS-enabled, called straight from the browser like FIRST's own search.
+export const FTCSCOUT_API_BASE = "https://api.ftcscout.org/rest/v1";
+
 export async function ftcTeamSearch(query) {
-  const res = await fetch(`https://api.ftcscout.org/rest/v1/teams/search?searchText=${encodeURIComponent(query)}&limit=5`);
+  const res = await fetch(`${FTCSCOUT_API_BASE}/teams/search?searchText=${encodeURIComponent(query)}&limit=5`);
   if (!res.ok) throw new Error('Search failed (' + res.status + ')');
+  return res.json();
+}
+
+// Generic FTCScout GET. Returns null on a 404 (e.g. a team with no data
+// for that season) rather than throwing, since that's an expected,
+// non-error outcome callers should handle quietly.
+export async function ftcScoutFetch(path) {
+  const res = await fetch(`${FTCSCOUT_API_BASE}${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`FTCScout API returned ${res.status}`);
   return res.json();
 }
 

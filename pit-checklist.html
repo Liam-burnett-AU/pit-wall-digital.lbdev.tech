@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Pit Checklist</title>
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=3">
 <style>
   .progress-ring-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .progress-text { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); text-align: right; }
@@ -82,7 +82,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=2";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=3";
 
     document.getElementById('navRoot').innerHTML = renderNav('checklist');
 

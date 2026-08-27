@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Events</title>
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=3">
 <style>
   .event-card { margin-bottom: 14px; }
   .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
@@ -20,24 +20,23 @@
   .record-value { font-family: var(--font-mono); font-size: 15px; }
   .record-value.accent { color: var(--accent); }
 
-  .analysis-actions { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .analysis-hint { font-size: 12px; color: var(--text-muted); }
+  .picker-card { margin-bottom: 20px; }
+  .past-view-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin: 20px 0 16px; }
 
-  .match-mini-list { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
-  .match-mini {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    font-size: 12.5px; font-family: var(--font-mono); padding: 7px 10px;
-    border-radius: var(--radius-sm); background: rgba(163, 193, 231, 0.05);
-  }
-  .match-mini .result { font-weight: 700; }
-  .match-mini .result.win { color: var(--success); }
-  .match-mini .result.loss { color: var(--danger); }
-  .match-mini .result.tie { color: var(--text-muted); }
+  .analysis-actions { margin-top: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .analysis-hint { font-size: 12px; color: var(--text-muted); }
 </style>
 </head>
 <body>
 
   <div id="toastContainer"></div>
+
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal-panel">
+      <button type="button" class="modal-close" id="modalCloseBtn">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
 
   <div class="app-shell">
     <div id="navRoot"></div>
@@ -61,7 +60,7 @@
           <div class="page-head">
             <div>
               <h1>Events</h1>
-              <p>Every event your team is registered for. For events you've already competed at, get an AI breakdown of where to improve — split by Driver, Programmer, and Builder.</p>
+              <p>Every event your team is registered for. Pick a past event below to see match results, the full team list, and an AI breakdown of where to improve — split by Driver, Programmer, and Builder.</p>
             </div>
           </div>
 
@@ -69,7 +68,35 @@
           <div id="upcomingList"></div>
 
           <div class="section-label">Past</div>
-          <div id="pastList"></div>
+
+          <div id="pastEmptyState" class="entries-empty hidden">No past events yet — once you've competed somewhere, it'll show up here.</div>
+
+          <div id="pastEventPicker" class="card picker-card hidden">
+            <div class="field" style="margin-bottom:0;">
+              <label for="pastEventSelect">Select a past event</label>
+              <select id="pastEventSelect"></select>
+            </div>
+          </div>
+
+          <div id="pastEventDetail" class="hidden">
+            <div class="event-card card" id="pastEventSummaryCard"></div>
+
+            <div class="past-view-row">
+              <div class="level-toggle">
+                <button type="button" class="level-btn active" id="viewOurMatches" data-view="ourMatches">Our Matches</button>
+                <button type="button" class="level-btn" id="viewAllMatches" data-view="allMatches">All Matches</button>
+                <button type="button" class="level-btn" id="viewTeams" data-view="teams">Teams</button>
+              </div>
+            </div>
+
+            <div id="pastEventContent"></div>
+
+            <div class="analysis-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="analysisBtn">Get AI Performance Analysis</button>
+              <span class="analysis-hint">Uses match results, scouting notes, and your notebook entries.</span>
+            </div>
+            <div id="analysisBlock"></div>
+          </div>
         </div>
       </main>
     </div>
@@ -87,8 +114,8 @@
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
-      ftcEventsFetch, fetchTeamEventsAcrossSeasons, callGroq
-    } from "./assets/app.js?v=2";
+      ftcEventsFetch, fetchTeamEventsAcrossSeasons, ftcScoutFetch, renderKeyValueList, callGroq
+    } from "./assets/app.js?v=3";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
 
@@ -103,12 +130,16 @@
     let scoutingContext = [];
     let notebookContext = [];
 
+    let pastEvents = [];
+    let currentPastEvent = null;
+    let currentView = 'ourMatches';
+    let viewToken = 0;
+
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
     const errorMessage = document.getElementById('errorMessage');
     const pageContent = document.getElementById('pageContent');
     const upcomingList = document.getElementById('upcomingList');
-    const pastList = document.getElementById('pastList');
 
     function showError(msg) {
       loadingState.classList.add('hidden');
@@ -165,7 +196,7 @@
 
         if (events.length === 0) {
           upcomingList.innerHTML = '<div class="entries-empty">No registered events found for this team yet.</div>';
-          pastList.innerHTML = '<div class="entries-empty">Nothing here yet.</div>';
+          document.getElementById('pastEmptyState').classList.remove('hidden');
           return;
         }
 
@@ -182,14 +213,13 @@
         past.sort((a, b) => new Date(b.dateStart) - new Date(a.dateStart));
 
         renderUpcoming(upcoming);
-        renderPast(past);
+        setupPastEventPicker(past);
 
       } catch (err) {
         console.error(err);
         loadingState.classList.add('hidden');
         pageContent.classList.remove('hidden');
         upcomingList.innerHTML = `<div class="entries-empty">Couldn't load events — check your FTC Events API credentials and connection.<br>(${escapeHtml(err.message)})</div>`;
-        pastList.innerHTML = '';
       }
     }
 
@@ -226,109 +256,371 @@
       `).join('');
     }
 
-    function renderPast(events) {
+    // ==================== PAST EVENT PICKER ====================
+
+    function setupPastEventPicker(events) {
+      pastEvents = events;
+      const picker = document.getElementById('pastEventPicker');
+      const detail = document.getElementById('pastEventDetail');
+      const emptyState = document.getElementById('pastEmptyState');
+      const select = document.getElementById('pastEventSelect');
+
       if (events.length === 0) {
-        pastList.innerHTML = '<div class="entries-empty">No past events yet — once you\'ve competed somewhere, it\'ll show up here with AI analysis.</div>';
+        picker.classList.add('hidden');
+        detail.classList.add('hidden');
+        emptyState.classList.remove('hidden');
         return;
       }
-      pastList.innerHTML = '';
-      events.forEach(e => {
-        const card = document.createElement('div');
-        card.className = 'event-card card';
-        card.dataset.eventCode = e.code;
-        card.innerHTML = `
-          <div class="event-head">
-            <div>
-              <div class="event-name">${escapeHtml(e.name)}</div>
-              <div class="event-meta">${formatDateRange(e)}</div>
-              ${venueLine(e) ? `<div class="event-venue">${escapeHtml(venueLine(e))}</div>` : ''}
-            </div>
-            <span class="badge accent">Past</span>
-          </div>
-          <div class="record-strip" id="record-${cssId(e.code)}">
-            <div class="record-item"><span class="info-label">Record</span><span class="record-value">Loading…</span></div>
-          </div>
-          <div class="match-mini-list" id="matches-${cssId(e.code)}"></div>
-          <div class="analysis-actions">
-            <button type="button" class="btn btn-primary btn-sm" data-action="analyse">Get AI Performance Analysis</button>
-            <span class="analysis-hint">Uses match results, scouting notes, and your notebook entries.</span>
-          </div>
-          <div id="analysis-${cssId(e.code)}"></div>
-        `;
-        pastList.appendChild(card);
 
-        card.querySelector('[data-action="analyse"]').addEventListener('click', (ev) => runAnalysis(e, ev.target));
+      picker.classList.remove('hidden');
+      emptyState.classList.add('hidden');
 
-        loadEventResults(e);
-        loadCachedAnalysis(e);
+      select.innerHTML = events.map(e =>
+        `<option value="${e.code}|${e._season}">${escapeHtml(e.name)} — ${formatDateRange(e)}</option>`
+      ).join('');
+
+      currentPastEvent = events[0];
+      select.value = `${currentPastEvent.code}|${currentPastEvent._season}`;
+      selectPastEvent(currentPastEvent);
+    }
+
+    document.getElementById('pastEventSelect').addEventListener('change', (ev) => {
+      const [code, season] = ev.target.value.split('|');
+      const match = pastEvents.find(e => e.code === code && String(e._season) === season);
+      if (match) selectPastEvent(match);
+    });
+
+    function selectPastEvent(event) {
+      currentPastEvent = event;
+      currentView = 'ourMatches';
+      document.querySelectorAll('.level-toggle .level-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.view === 'ourMatches')
+      );
+      renderPastEventDetail();
+    }
+
+    document.querySelectorAll('.level-toggle .level-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentView = btn.dataset.view;
+        document.querySelectorAll('.level-toggle .level-btn').forEach(b => b.classList.toggle('active', b === btn));
+        renderActiveView();
       });
+    });
+
+    function renderPastEventDetail() {
+      const e = currentPastEvent;
+      document.getElementById('pastEventDetail').classList.remove('hidden');
+
+      document.getElementById('pastEventSummaryCard').innerHTML = `
+        <div class="event-head">
+          <div>
+            <div class="event-name">${escapeHtml(e.name)}</div>
+            <div class="event-meta">${formatDateRange(e)}</div>
+            ${venueLine(e) ? `<div class="event-venue">${escapeHtml(venueLine(e))}</div>` : ''}
+          </div>
+          <span class="badge accent">Past</span>
+        </div>
+        <div class="record-strip" id="recordStrip">
+          <div class="record-item"><span class="info-label">Record</span><span class="record-value">Loading…</span></div>
+        </div>
+      `;
+
+      loadRecordStrip(e);
+      renderActiveView();
+      loadCachedAnalysis(e);
     }
 
-    function cssId(code) {
-      return String(code).replace(/[^a-zA-Z0-9_-]/g, '');
+    // ==================== OUR MATCHES / RECORD ====================
+
+    async function ensureOurMatches(event) {
+      if (event._ourMatches) return event._ourMatches;
+
+      const data = await ftcEventsFetch(`/${event._season}/matches/${event.code}?teamNumber=${teamNumber}`);
+      const rawMatches = data.matches || [];
+      const played = rawMatches.filter(m => m.scoreRedFinal != null || m.scoreBlueFinal != null);
+
+      let wins = 0, losses = 0, ties = 0;
+      const summaries = played.map(m => {
+        const teams = m.teams || [];
+        const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
+        const myColour = mine && (mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue';
+        const myScore = myColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
+        const oppScore = myColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
+        let result = 'tie';
+        if (myScore > oppScore) { result = 'win'; wins++; }
+        else if (myScore < oppScore) { result = 'loss'; losses++; }
+        else { ties++; }
+        return { matchNumber: m.matchNumber, result, myScore, oppScore };
+      });
+
+      event._ourMatches = { rawMatches, summaries, wins, losses, ties };
+      return event._ourMatches;
     }
 
-    async function loadEventResults(e) {
-      const recordEl = document.getElementById(`record-${cssId(e.code)}`);
-      const matchesEl = document.getElementById(`matches-${cssId(e.code)}`);
+    async function loadRecordStrip(event) {
+      const recordEl = document.getElementById('recordStrip');
       try {
-        const data = await ftcEventsFetch(`/${e._season}/matches/${e.code}?teamNumber=${teamNumber}`);
-        const matches = (data.matches || []).filter(m => m.scoreRedFinal != null || m.scoreBlueFinal != null);
+        const results = await ensureOurMatches(event);
+        if (event !== currentPastEvent) return;
 
-        if (matches.length === 0) {
+        if (results.rawMatches.length === 0) {
           recordEl.innerHTML = `<div class="record-item"><span class="info-label">Record</span><span class="record-value">No results published</span></div>`;
-          e._results = { matches: [], wins: 0, losses: 0, ties: 0 };
           return;
         }
 
-        let wins = 0, losses = 0, ties = 0;
-        const summaries = matches.map(m => {
-          const teams = m.teams || [];
-          const mine = teams.find(t => String(t.teamNumber) === String(teamNumber));
-          const myColour = mine && (mine.station || '').toLowerCase().includes('red') ? 'red' : 'blue';
-          const myScore = myColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
-          const oppScore = myColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
-          let result = 'tie';
-          if (myScore > oppScore) { result = 'win'; wins++; }
-          else if (myScore < oppScore) { result = 'loss'; losses++; }
-          else { ties++; }
-          return { matchNumber: m.matchNumber, result, myScore, oppScore };
-        });
-
         recordEl.innerHTML = `
-          <div class="record-item"><span class="info-label">Record</span><span class="record-value accent">${wins}-${losses}-${ties}</span></div>
-          <div class="record-item"><span class="info-label">Matches Played</span><span class="record-value">${matches.length}</span></div>
+          <div class="record-item"><span class="info-label">Record</span><span class="record-value accent">${results.wins}-${results.losses}-${results.ties}</span></div>
+          <div class="record-item"><span class="info-label">Matches Played</span><span class="record-value">${results.summaries.length}</span></div>
         `;
-
-        matchesEl.innerHTML = summaries.map(s => `
-          <div class="match-mini">
-            <span>Match ${s.matchNumber ?? '?'}</span>
-            <span>${s.myScore ?? '—'} – ${s.oppScore ?? '—'}</span>
-            <span class="result ${s.result}">${s.result.toUpperCase()}</span>
-          </div>
-        `).join('');
-
-        e._results = { matches: summaries, wins, losses, ties };
-
       } catch (err) {
-        console.error('Match results error:', err);
-        recordEl.innerHTML = `<div class="record-item"><span class="info-label">Record</span><span class="record-value">Couldn't load results</span></div>`;
-        e._results = null;
+        console.error('Record strip error:', err);
+        if (event === currentPastEvent) {
+          recordEl.innerHTML = `<div class="record-item"><span class="info-label">Record</span><span class="record-value">Couldn't load results</span></div>`;
+        }
       }
     }
 
-    async function loadCachedAnalysis(e) {
+    // ==================== ALL MATCHES / TEAMS (lazy-loaded per event) ====================
+
+    async function ensureAllMatches(event) {
+      if (event._allMatches) return event._allMatches;
+      const data = await ftcEventsFetch(`/${event._season}/matches/${event.code}`);
+      event._allMatches = data.matches || [];
+      return event._allMatches;
+    }
+
+    async function ensureTeams(event) {
+      if (event._teams) return event._teams;
+
+      const data = await ftcEventsFetch(`/${event._season}/teams?eventCode=${event.code}`);
+      const teams = data.teams || [];
+
       try {
-        const snap = await getDoc(doc(db, 'eventAnalysis', currentUid, 'events', e.code));
-        if (snap.exists()) renderAnalysis(e.code, snap.data());
+        const rankData = await ftcEventsFetch(`/${event._season}/rankings/${event.code}`);
+        const rankings = rankData.rankings || [];
+        teams.forEach(t => {
+          t._ranking = rankings.find(r => String(r.teamNumber) === String(t.teamNumber)) || null;
+        });
+      } catch (err) {
+        // rankings not published for this event — teams list still works without it
+        console.error('Rankings error:', err);
+      }
+
+      event._teams = teams;
+      return event._teams;
+    }
+
+    // ==================== VIEW RENDERING ====================
+
+    async function renderActiveView() {
+      const myToken = ++viewToken;
+      const event = currentPastEvent;
+      const container = document.getElementById('pastEventContent');
+      container.innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+
+      try {
+        if (currentView === 'ourMatches') {
+          const results = await ensureOurMatches(event);
+          if (myToken !== viewToken) return;
+          renderMatchList(container, results.rawMatches, event);
+
+        } else if (currentView === 'allMatches') {
+          const matches = await ensureAllMatches(event);
+          if (myToken !== viewToken) return;
+          renderMatchList(container, matches, event);
+
+        } else if (currentView === 'teams') {
+          const teams = await ensureTeams(event);
+          if (myToken !== viewToken) return;
+          renderTeamList(container, teams, event);
+        }
+      } catch (err) {
+        console.error('View load error:', err);
+        if (myToken === viewToken) {
+          container.innerHTML = `<div class="entries-empty">Couldn't load that — check your connection.<br>(${escapeHtml(err.message)})</div>`;
+        }
+      }
+    }
+
+    function renderMatchList(container, matches, event) {
+      if (!matches || matches.length === 0) {
+        container.innerHTML = '<div class="entries-empty">No matches published for this event yet.</div>';
+        return;
+      }
+
+      container.innerHTML = `<div class="list-table">${matches.map((m, i) => matchRowHtml(m, i)).join('')}</div>`;
+      container.querySelectorAll('[data-match-index]').forEach(row => {
+        const idx = parseInt(row.dataset.matchIndex, 10);
+        row.addEventListener('click', () => openMatchModal(event, matches[idx]));
+      });
+    }
+
+    function matchRowHtml(m, idx) {
+      const teams = m.teams || [];
+      const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
+      const blue = teams.filter(t => (t.station || '').toLowerCase().includes('blue'));
+      const played = m.scoreRedFinal != null || m.scoreBlueFinal != null;
+      const scoreStr = played ? `${m.scoreRedFinal ?? '—'} – ${m.scoreBlueFinal ?? '—'}` : 'Not played';
+      const teamsStr = `R: ${red.map(t => '#' + t.teamNumber).join(', ') || '—'} · B: ${blue.map(t => '#' + t.teamNumber).join(', ') || '—'}`;
+
+      return `
+        <div class="list-row" data-match-index="${idx}">
+          <div>
+            <div class="primary">Match ${m.matchNumber ?? '?'} <span class="faint" style="font-weight:400;">(${escapeHtml(m.tournamentLevel || 'qual')})</span></div>
+            <div class="secondary">${escapeHtml(teamsStr)}</div>
+          </div>
+          <div class="secondary">${escapeHtml(scoreStr)}</div>
+        </div>
+      `;
+    }
+
+    function renderTeamList(container, teams, event) {
+      if (!teams || teams.length === 0) {
+        container.innerHTML = '<div class="entries-empty">No team list published for this event yet.</div>';
+        return;
+      }
+
+      container.innerHTML = `<div class="list-table">${teams.map((t, i) => teamRowHtml(t, i)).join('')}</div>`;
+      container.querySelectorAll('[data-team-index]').forEach(row => {
+        const idx = parseInt(row.dataset.teamIndex, 10);
+        row.addEventListener('click', () => openTeamModal(event, teams[idx]));
+      });
+    }
+
+    function teamRowHtml(t, idx) {
+      const rankStr = t._ranking ? `Rank ${t._ranking.rank}` : '';
+      const location = [t.city, t.stateProv, t.country].filter(Boolean).join(', ');
+      return `
+        <div class="list-row" data-team-index="${idx}">
+          <div>
+            <div class="primary">#${escapeHtml(t.teamNumber)} ${escapeHtml(t.nameShort || t.nameFull || 'Unnamed team')}</div>
+            <div class="secondary">${escapeHtml(location || 'Location unknown')}</div>
+          </div>
+          <div class="secondary">${escapeHtml(rankStr)}</div>
+        </div>
+      `;
+    }
+
+    // ==================== MODALS ====================
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.add('hidden');
+    }
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modalOverlay') closeModal();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    async function openMatchModal(event, match) {
+      const teams = match.teams || [];
+      const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
+      const blue = teams.filter(t => (t.station || '').toLowerCase().includes('blue'));
+      const played = match.scoreRedFinal != null || match.scoreBlueFinal != null;
+
+      document.getElementById('modalBody').innerHTML = `
+        <div class="modal-title">Match ${match.matchNumber ?? '?'} — ${escapeHtml(match.tournamentLevel || 'Qualification')}</div>
+        <div class="modal-subtitle">${escapeHtml(event.name)} · ${formatDateRange(event)}</div>
+
+        <div class="modal-section">
+          <div class="entry-grid">
+            <div><span class="info-label">Red Alliance</span><span class="info-value">${red.map(t => '#' + t.teamNumber).join(', ') || '—'}</span></div>
+            <div><span class="info-label">Blue Alliance</span><span class="info-value">${blue.map(t => '#' + t.teamNumber).join(', ') || '—'}</span></div>
+            <div><span class="info-label">Score</span><span class="info-value accent">${played ? `${match.scoreRedFinal} – ${match.scoreBlueFinal}` : 'Not played yet'}</span></div>
+          </div>
+        </div>
+
+        <div class="modal-subhead">Full Match Data (FTC Events API)</div>
+        ${renderKeyValueList(match, { skip: ['teams'] })}
+
+        <div class="modal-subhead">Team Season Stats (FTCScout API)</div>
+        <div id="modalScoutStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
+      `;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+
+      const scoutEl = document.getElementById('modalScoutStats');
+      const allTeams = [...red, ...blue];
+
+      try {
+        const stats = await Promise.all(allTeams.map(async (t) => {
+          try {
+            const s = await ftcScoutFetch(`/teams/${t.teamNumber}/quick-stats?season=${event._season}`);
+            return { number: t.teamNumber, stats: s };
+          } catch (err) {
+            return { number: t.teamNumber, stats: null };
+          }
+        }));
+
+        scoutEl.innerHTML = stats.map(s => `
+          <div class="modal-subhead" style="margin-top:14px;">#${escapeHtml(s.number)}</div>
+          ${s.stats ? renderKeyValueList(s.stats) : '<p class="faint" style="font-size:13px;">No FTCScout stats available for this team/season.</p>'}
+        `).join('');
+      } catch (err) {
+        console.error('FTCScout match stats error:', err);
+        scoutEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout stats.</p>';
+      }
+    }
+
+    async function openTeamModal(event, team) {
+      document.getElementById('modalBody').innerHTML = `
+        <div class="modal-title">#${escapeHtml(team.teamNumber)} ${escapeHtml(team.nameShort || team.nameFull || 'Unnamed team')}</div>
+        <div class="modal-subtitle">${escapeHtml(event.name)}</div>
+
+        <div class="modal-subhead">Event Roster Info (FTC Events API)</div>
+        ${renderKeyValueList(team, { skip: ['_ranking'] })}
+
+        ${team._ranking ? `
+          <div class="modal-subhead">Ranking at this Event (FTC Events API)</div>
+          ${renderKeyValueList(team._ranking)}
+        ` : ''}
+
+        <div class="modal-subhead">Team Profile (FTCScout API)</div>
+        <div id="modalScoutProfile"><p class="faint" style="font-size:13px;">Loading...</p></div>
+
+        <div class="modal-subhead">Season Quick Stats (FTCScout API)</div>
+        <div id="modalScoutQuickStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
+      `;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+
+      const profileEl = document.getElementById('modalScoutProfile');
+      const statsEl = document.getElementById('modalScoutQuickStats');
+
+      try {
+        const profile = await ftcScoutFetch(`/teams/${team.teamNumber}`);
+        profileEl.innerHTML = profile ? renderKeyValueList(profile) : '<p class="faint" style="font-size:13px;">No FTCScout profile found for this team.</p>';
+      } catch (err) {
+        console.error('FTCScout profile error:', err);
+        profileEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout profile.</p>';
+      }
+
+      try {
+        const stats = await ftcScoutFetch(`/teams/${team.teamNumber}/quick-stats?season=${event._season}`);
+        statsEl.innerHTML = stats ? renderKeyValueList(stats) : '<p class="faint" style="font-size:13px;">No stats available for this season.</p>';
+      } catch (err) {
+        console.error('FTCScout quick-stats error:', err);
+        statsEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout stats.</p>';
+      }
+    }
+
+    // ==================== AI PERFORMANCE ANALYSIS ====================
+
+    async function loadCachedAnalysis(event) {
+      const block = document.getElementById('analysisBlock');
+      block.innerHTML = '';
+      document.getElementById('analysisBtn').textContent = 'Get AI Performance Analysis';
+      try {
+        const snap = await getDoc(doc(db, 'eventAnalysis', currentUid, 'events', event.code));
+        if (snap.exists() && event === currentPastEvent) {
+          renderAnalysis(snap.data());
+          document.getElementById('analysisBtn').textContent = 'Regenerate Analysis';
+        }
       } catch (err) {
         console.error("Couldn't load cached analysis", err);
       }
     }
 
-    function renderAnalysis(eventCode, data) {
-      const el = document.getElementById(`analysis-${cssId(eventCode)}`);
-      if (!el) return;
+    function renderAnalysis(data) {
+      const el = document.getElementById('analysisBlock');
       const when = data.generatedAt ? new Date(data.generatedAt).toLocaleString('en-AU') : '';
       el.innerHTML = `
         <div class="ai-block">
@@ -349,14 +641,14 @@ Structure your response with these headings, in this order:
 
 Be specific and reference the actual data provided (scores, win/loss pattern, notes) rather than generic advice. If data for a section is too thin to say anything specific, say so briefly rather than padding it out. Keep the whole response under 350 words.`;
 
-    function buildEventPrompt(e) {
+    function buildEventPrompt(event, results) {
       const lines = [];
-      lines.push(`Event: ${e.name} (${formatDateRange(e)})`);
+      lines.push(`Event: ${event.name} (${formatDateRange(event)})`);
 
-      if (e._results && e._results.matches.length) {
-        lines.push(`Record: ${e._results.wins}-${e._results.losses}-${e._results.ties} (W-L-T) across ${e._results.matches.length} matches.`);
+      if (results.summaries.length) {
+        lines.push(`Record: ${results.wins}-${results.losses}-${results.ties} (W-L-T) across ${results.summaries.length} matches.`);
         lines.push('Match-by-match results:');
-        e._results.matches.forEach(m => {
+        results.summaries.forEach(m => {
           lines.push(`- Match ${m.matchNumber ?? '?'}: ${m.result.toUpperCase()}, ${m.myScore ?? '—'} to ${m.oppScore ?? '—'}`);
         });
       } else {
@@ -384,9 +676,12 @@ Be specific and reference the actual data provided (scores, win/loss pattern, no
       return lines.join('\n');
     }
 
-    async function runAnalysis(e, btn) {
-      const el = document.getElementById(`analysis-${cssId(e.code)}`);
+    document.getElementById('analysisBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('analysisBtn');
+      const event = currentPastEvent;
+      const el = document.getElementById('analysisBlock');
       const originalLabel = btn.textContent;
+
       btn.disabled = true;
       btn.textContent = 'Analysing...';
       el.innerHTML = `
@@ -397,7 +692,8 @@ Be specific and reference the actual data provided (scores, win/loss pattern, no
       `;
 
       try {
-        const prompt = buildEventPrompt(e);
+        const results = await ensureOurMatches(event);
+        const prompt = buildEventPrompt(event, results);
         const data = await callGroq([
           { role: 'system', content: EVENT_ANALYSIS_SYSTEM_PROMPT },
           { role: 'user', content: prompt }
@@ -406,28 +702,32 @@ Be specific and reference the actual data provided (scores, win/loss pattern, no
         if (!analysis) throw new Error('No analysis returned from the AI.');
 
         const generatedAt = new Date().toISOString();
-        await setDoc(doc(db, 'eventAnalysis', currentUid, 'events', e.code), {
-          eventName: e.name, eventCode: e.code, analysis, generatedAt
+        await setDoc(doc(db, 'eventAnalysis', currentUid, 'events', event.code), {
+          eventName: event.name, eventCode: event.code, analysis, generatedAt
         });
 
-        renderAnalysis(e.code, { analysis, generatedAt });
+        if (event !== currentPastEvent) return; // user moved on to a different event while this was running
+
+        renderAnalysis({ analysis, generatedAt });
         toast('Analysis ready.', 'success');
         btn.textContent = 'Regenerate Analysis';
 
       } catch (err) {
         console.error('Event analysis error:', err);
-        el.innerHTML = `
-          <div class="ai-block">
-            <span class="ai-label"><span class="ai-dot"></span>AI Performance Analysis</span>
-            <div class="ai-body">Couldn't get an analysis: ${escapeHtml(err.message)}. Try again in a moment.</div>
-          </div>
-        `;
+        if (event === currentPastEvent) {
+          el.innerHTML = `
+            <div class="ai-block">
+              <span class="ai-label"><span class="ai-dot"></span>AI Performance Analysis</span>
+              <div class="ai-body">Couldn't get an analysis: ${escapeHtml(err.message)}. Try again in a moment.</div>
+            </div>
+          `;
+          btn.textContent = originalLabel;
+        }
         toast("Couldn't generate analysis.", 'error');
-        btn.textContent = originalLabel;
       } finally {
         btn.disabled = false;
       }
-    }
+    });
   </script>
 
 </body>
