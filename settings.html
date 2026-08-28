@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Settings</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   h1.page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 30px; }
   .settings-section { margin-bottom: 20px; }
@@ -127,7 +127,7 @@
 
           <div class="settings-section danger card">
             <h2 class="danger-title">Delete Account</h2>
-            <p class="section-desc">Permanently deletes your account and every piece of data tied to it — team profile, robot profile, scouting log, notebook, checklist, chat history, cached AI analysis, everything. This cannot be undone.</p>
+            <p class="section-desc">Permanently deletes your login and removes you from your team's roster. This does <strong>not</strong> delete your team's shared data (robot profile, scouting log, notebook, chat history, etc.) — teammates may still be using it. If you also want to erase that, use "Delete All My Data" above first. This cannot be undone.</p>
 
             <div class="field">
               <label for="deleteAccountPassword">Current password (to confirm it's you)</label>
@@ -136,9 +136,9 @@
 
             <button type="button" class="btn btn-danger solid" id="deleteAccountShowBtn">Delete My Account</button>
             <div id="deleteAccountConfirm" class="confirm-box hidden">
-              <p>Are you absolutely sure? Everything tied to your team will be permanently deleted.</p>
+              <p>Are you absolutely sure? Your login will be permanently deleted and you'll be removed from the team roster. Your team's shared data stays intact.</p>
               <div class="confirm-actions">
-                <button type="button" class="btn btn-danger solid" id="deleteAccountConfirmBtn">Yes, Delete Everything</button>
+                <button type="button" class="btn btn-danger solid" id="deleteAccountConfirmBtn">Yes, Delete My Account</button>
                 <button type="button" class="btn btn-outline" id="deleteAccountCancelBtn">Cancel</button>
               </div>
             </div>
@@ -159,7 +159,7 @@
       reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION } from "./assets/app.js?v=6";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('versionLine').textContent = `Pit Wall v${APP_VERSION}`;
 
@@ -171,6 +171,7 @@
     wireNav(auth, signOut);
 
     let currentUser = null;
+    let currentTeamId = null;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -199,7 +200,8 @@
       currentUser = user;
 
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
@@ -226,9 +228,9 @@
     // ==================== DATA USAGE / DELETE ALL DATA ====================
 
     // Everything except `teams` — kept separate so "Delete All My Data" can
-    // wipe it while leaving the team's identity/login intact, and "Delete
-    // Account" can wipe it all including `teams` right before removing the
-    // Auth user.
+    // wipe a team's shared data while leaving the team's identity intact.
+    // These collections are keyed by teamId, not by an individual member's
+    // uid, since a team can now have multiple people signed into it.
     const SINGLE_DOC_COLLECTIONS = ['robots', 'chatHistory', 'pitChecklist', 'notebookFinal', 'generatedNotebook'];
     const SUBCOLLECTIONS = [
       { name: 'scouting', sub: 'entries' },
@@ -245,14 +247,14 @@
       try { return new Blob([JSON.stringify(obj)]).size; } catch (err) { return 0; }
     }
 
-    async function calculateDataUsage(uid) {
+    async function calculateDataUsage(teamId) {
       let totalBytes = 0;
 
-      const teamSnap = await getDoc(doc(db, 'teams', uid));
+      const teamSnap = await getDoc(doc(db, 'teams', teamId));
       if (teamSnap.exists()) totalBytes += blobSize(teamSnap.data());
 
       for (const col of SINGLE_DOC_COLLECTIONS) {
-        const snap = await getDoc(doc(db, col, uid));
+        const snap = await getDoc(doc(db, col, teamId));
         if (!snap.exists()) continue;
         const data = snap.data();
         totalBytes += blobSize(data);
@@ -260,7 +262,7 @@
       }
 
       for (const { name, sub } of SUBCOLLECTIONS) {
-        const snap = await getDocs(collection(db, name, uid, sub));
+        const snap = await getDocs(collection(db, name, teamId, sub));
         snap.forEach((docSnap) => {
           const data = docSnap.data();
           totalBytes += blobSize(data);
@@ -275,7 +277,7 @@
       const el = document.getElementById('dataUsageValue');
       el.textContent = 'Calculating…';
       try {
-        const bytes = await calculateDataUsage(currentUser.uid);
+        const bytes = await calculateDataUsage(currentTeamId);
         const mb = bytes / (1024 * 1024);
         el.innerHTML = `<span class="accent-text" style="font-size:18px; font-weight:700;">${mb.toFixed(2)} MB</span> <span class="muted">stored across your account</span>`;
       } catch (err) {
@@ -287,14 +289,13 @@
     document.getElementById('refreshUsageBtn').addEventListener('click', renderDataUsage);
 
     // Deletes everything in SINGLE_DOC_COLLECTIONS/SUBCOLLECTIONS for this
-    // uid, and `teams` too if deleteTeam is set. Deleting a doc that doesn't
-    // exist is a no-op in Firestore, so no existence checks are needed here.
-    async function wipeAllCollections(uid, { deleteTeam }) {
-      const deletions = SINGLE_DOC_COLLECTIONS.map(col => deleteDoc(doc(db, col, uid)));
-      if (deleteTeam) deletions.push(deleteDoc(doc(db, 'teams', uid)));
+    // team, keeping `teams` itself intact. Deleting a doc that doesn't exist
+    // is a no-op in Firestore, so no existence checks are needed here.
+    async function wipeAllCollections(teamId) {
+      const deletions = SINGLE_DOC_COLLECTIONS.map(col => deleteDoc(doc(db, col, teamId)));
 
       for (const { name, sub } of SUBCOLLECTIONS) {
-        const snap = await getDocs(collection(db, name, uid, sub));
+        const snap = await getDocs(collection(db, name, teamId, sub));
         snap.forEach((docSnap) => deletions.push(deleteDoc(docSnap.ref)));
       }
 
@@ -308,7 +309,7 @@
       btn.disabled = true;
       btn.textContent = 'Deleting...';
       try {
-        await wipeAllCollections(currentUser.uid, { deleteTeam: false });
+        await wipeAllCollections(currentTeamId);
         hideConfirm('deleteAllData');
         setStatus('deleteAllDataStatus', 'All your data has been deleted. Your login and team profile are unaffected.', 'success');
         renderDataUsage();
@@ -386,7 +387,7 @@
       }
 
       try {
-        await setDoc(doc(db, 'teams', currentUser.uid), {
+        await setDoc(doc(db, 'teams', currentTeamId), {
           teamName, teamNumber, competition, updatedAt: new Date().toISOString()
         }, { merge: true });
 
@@ -405,7 +406,7 @@
     document.getElementById('clearChatCancelBtn').addEventListener('click', () => hideConfirm('clearChat'));
     document.getElementById('clearChatConfirmBtn').addEventListener('click', async () => {
       try {
-        await deleteDoc(doc(db, 'chatHistory', currentUser.uid));
+        await deleteDoc(doc(db, 'chatHistory', currentTeamId));
         hideConfirm('clearChat');
         setStatus('clearChatStatus', 'Chat history cleared.', 'success');
       } catch (err) {
@@ -425,7 +426,7 @@
 
       try {
         await reauthenticate(password);
-        await wipeAllCollections(currentUser.uid, { deleteTeam: true });
+        await deleteDoc(doc(db, 'members', currentUser.uid));
         await deleteUser(currentUser);
         window.location.href = 'index.html';
       } catch (err) {

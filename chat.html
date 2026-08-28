@@ -6,7 +6,7 @@
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — AI Chat</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   html, body { height: 100%; overflow: hidden; }
   .app-shell { height: 100vh; height: 100dvh; }
@@ -171,7 +171,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js?v=6";
+    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('chat');
 
@@ -180,7 +180,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
     let messages = [];
     let teamContext = null;
     let robotContext = null;
@@ -206,15 +206,14 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
+        currentTeamId = await resolveTeamId(db, user);
         const [teamSnap, robotSnap, chatSnap, scoutingSnap, notebookSnap] = await Promise.all([
-          getDoc(doc(db, 'teams', user.uid)),
-          getDoc(doc(db, 'robots', user.uid)),
-          getDoc(doc(db, 'chatHistory', user.uid)),
-          getDocs(query(collection(db, 'scouting', user.uid, 'entries'), orderBy('createdAt', 'desc'), limit(20))),
-          getDocs(query(collection(db, 'engineeringNotebook', user.uid, 'entries'), orderBy('date', 'desc'), limit(10)))
+          getDoc(doc(db, 'teams', currentTeamId)),
+          getDoc(doc(db, 'robots', currentTeamId)),
+          getDoc(doc(db, 'chatHistory', currentTeamId)),
+          getDocs(query(collection(db, 'scouting', currentTeamId, 'entries'), orderBy('createdAt', 'desc'), limit(20))),
+          getDocs(query(collection(db, 'engineeringNotebook', currentTeamId, 'entries'), orderBy('date', 'desc'), limit(10)))
         ]);
 
         if (!teamSnap.exists()) {
@@ -446,7 +445,7 @@ Formatting: you may use Markdown (bold, lists, headers, code blocks) and LaTeX m
         messages.push({ role: 'assistant', content: replyText, timestamp: new Date().toISOString() });
         renderMessages();
 
-        await setDoc(doc(db, 'chatHistory', currentUid), { messages, updatedAt: new Date().toISOString() });
+        await setDoc(doc(db, 'chatHistory', currentTeamId), { messages, updatedAt: new Date().toISOString() });
 
       } catch (err) {
         console.error('Chat error:', err);

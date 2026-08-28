@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Dashboard</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   .welcome-block { margin-bottom: 34px; }
   .welcome-block h1 { font-size: clamp(26px, 3.2vw, 34px); font-weight: 700; letter-spacing: -0.5px; }
@@ -87,6 +87,13 @@
               <p>See past and upcoming events, and get AI analysis of where to improve — Driver, Programmer, Builder.</p>
               <span class="cta">View events →</span>
             </a>
+
+            <a href="roster.html" class="action-card">
+              <div class="card-icon">👥</div>
+              <h3>Team Roster</h3>
+              <p>See who's on the team, invite new members with a join code, and set each person's role.</p>
+              <span class="cta">Open roster →</span>
+            </a>
           </div>
 
           <h2 class="section-label">Robot Snapshot</h2>
@@ -103,7 +110,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=6";
+    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('dashboard');
 
@@ -131,7 +138,8 @@
       }
 
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        const teamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', teamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account. Try signing up again, or contact your Pit Wall admin.');
           return;
@@ -139,7 +147,7 @@
 
         const team = teamSnap.data();
         populateDashboard(team);
-        loadRobotSummary(user.uid);
+        loadRobotSummary(teamId);
 
       } catch (err) {
         console.error(err);
@@ -158,9 +166,9 @@
       dashboardContent.classList.remove('hidden');
     }
 
-    async function loadRobotSummary(uid) {
+    async function loadRobotSummary(teamId) {
       try {
-        const robotSnap = await getDoc(doc(db, 'robots', uid));
+        const robotSnap = await getDoc(doc(db, 'robots', teamId));
         const summaryEl = document.getElementById('robotSummary');
         if (!robotSnap.exists()) return;
 

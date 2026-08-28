@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Scouting</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   .form-card { margin-bottom: 30px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -141,7 +141,7 @@
     import {
       getFirestore, doc, getDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=6";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('scouting');
 
@@ -150,7 +150,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
     let editingEntryId = null;
     let currentEntries = [];
 
@@ -171,10 +171,9 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
@@ -228,14 +227,14 @@
 
       try {
         if (editingEntryId) {
-          await updateDoc(doc(db, 'scouting', currentUid, 'entries', editingEntryId), {
+          await updateDoc(doc(db, 'scouting', currentTeamId, 'entries', editingEntryId), {
             scoutedTeamNumber, scoutedTeamName, eventName, matchNumber,
             drivetrainObserved, scoringCapability, autoObserved, driverRating, notes,
             updatedAt: new Date().toISOString()
           });
           status.textContent = 'Entry updated.';
         } else {
-          await addDoc(collection(db, 'scouting', currentUid, 'entries'), {
+          await addDoc(collection(db, 'scouting', currentTeamId, 'entries'), {
             scoutedTeamNumber, scoutedTeamName, eventName, matchNumber,
             drivetrainObserved, scoringCapability, autoObserved, driverRating, notes,
             disregarded: false, createdAt: new Date().toISOString()
@@ -291,7 +290,7 @@
 
     async function toggleDisregard(entryId, currentlyDisregarded) {
       try {
-        await updateDoc(doc(db, 'scouting', currentUid, 'entries', entryId), { disregarded: !currentlyDisregarded });
+        await updateDoc(doc(db, 'scouting', currentTeamId, 'entries', entryId), { disregarded: !currentlyDisregarded });
         toast(currentlyDisregarded ? 'Entry restored.' : 'Entry disregarded — hidden from AI context.', 'success');
         await loadEntries();
       } catch (err) {
@@ -303,7 +302,7 @@
     async function deleteEntry(entryId) {
       if (!confirm("Delete this scouting entry? This can't be undone.")) return;
       try {
-        await deleteDoc(doc(db, 'scouting', currentUid, 'entries', entryId));
+        await deleteDoc(doc(db, 'scouting', currentTeamId, 'entries', entryId));
         toast('Entry deleted.', 'success');
         await loadEntries();
       } catch (err) {
@@ -315,7 +314,7 @@
     async function loadEntries() {
       const list = document.getElementById('entriesList');
       try {
-        const entriesQuery = query(collection(db, 'scouting', currentUid, 'entries'), orderBy('createdAt', 'desc'));
+        const entriesQuery = query(collection(db, 'scouting', currentTeamId, 'entries'), orderBy('createdAt', 'desc'));
         const snap = await getDocs(entriesQuery);
 
         currentEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));

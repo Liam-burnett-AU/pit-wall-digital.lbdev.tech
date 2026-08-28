@@ -3,60 +3,94 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Team profile — created at signup, keyed by the user's own uid.
-    match /teams/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    // True if the signed-in user belongs to the given team. Looks up their
+    // own membership doc (members/{their uid}) and checks its teamId — this
+    // is what lets every teammate read/write the team's shared data, not
+    // just whoever originally created the team.
+    function isTeamMember(teamId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.teamId == teamId;
+    }
+
+    // Maps each signed-in person to their team + a descriptive role.
+    // A member can always manage their own doc; any teammate can manage
+    // another member's doc too (edit their name/role, remove them from the
+    // roster) since roles here are descriptive only, not access control.
+    // teamId itself can't be changed via update — only by delete + recreate
+    // (i.e. leaving/joining), so a teammate can't reassign someone else's
+    // team membership out from under them.
+    match /members/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isTeamMember(resource.data.teamId));
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null
+        && (request.auth.uid == uid || isTeamMember(resource.data.teamId))
+        && request.resource.data.teamId == resource.data.teamId;
+      allow delete: if request.auth != null && (request.auth.uid == uid || isTeamMember(resource.data.teamId));
+    }
+
+    // Team profile. Reads are public — this is a deliberate tradeoff: joining
+    // a team by code needs to look up the team before the new member has
+    // signed in (and therefore before they can pass any team-membership
+    // check), and there's no backend function in this project to gate that
+    // lookup more tightly. Team name/number/join code aren't sensitive (team
+    // name/number are public via FTCScout anyway); writes still require
+    // being on the team.
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == teamId;
+      allow update: if isTeamMember(teamId);
     }
 
     // Robot profile
-    match /robots/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /robots/{teamId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // AI chat history
-    match /chatHistory/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /chatHistory/{teamId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Pit checklist
-    match /pitChecklist/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /pitChecklist/{teamId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Final engineering notebook document upload (metadata + AI feedback —
     // the file itself lives on Cloudinary)
-    match /notebookFinal/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /notebookFinal/{teamId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // AI-generated full engineering notebook write-up
-    match /generatedNotebook/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /generatedNotebook/{teamId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Cached AI event-performance analysis, one doc per past event
-    match /eventAnalysis/{uid}/events/{eventCode} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /eventAnalysis/{teamId}/events/{eventCode} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Cached AI per-match feedback, one doc per match
-    match /matchAnalysis/{uid}/matches/{matchId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /matchAnalysis/{teamId}/matches/{matchId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Scouting entries — opponent-team notes logged by this team
-    match /scouting/{uid}/entries/{entryId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /scouting/{teamId}/entries/{entryId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Engineering notebook entries
-    match /engineeringNotebook/{uid}/entries/{entryId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /engineeringNotebook/{teamId}/entries/{entryId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Notebook page photo metadata (image files live on Cloudinary)
-    match /notebookPhotos/{uid}/photos/{photoId} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+    match /notebookPhotos/{teamId}/photos/{photoId} {
+      allow read, write: if isTeamMember(teamId);
     }
 
     // Deny anything not explicitly matched above.

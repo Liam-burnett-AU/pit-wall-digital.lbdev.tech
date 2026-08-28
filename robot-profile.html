@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Robot Profile</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   form { display: flex; flex-direction: column; gap: 22px; }
   .actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
@@ -80,7 +80,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=6";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('robot');
 
@@ -89,7 +89,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -111,17 +111,16 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
         }
         setTeamChip(teamSnap.data());
 
-        const robotSnap = await getDoc(doc(db, 'robots', user.uid));
+        const robotSnap = await getDoc(doc(db, 'robots', currentTeamId));
         if (robotSnap.exists()) {
           const robot = robotSnap.data();
           document.getElementById('drivetrain').value = robot.drivetrain || '';
@@ -160,7 +159,7 @@
 
       try {
         const updatedAt = new Date().toISOString();
-        await setDoc(doc(db, 'robots', currentUid), { drivetrain, gamePieceMechanism, autonomousRoutine, notes, updatedAt });
+        await setDoc(doc(db, 'robots', currentTeamId), { drivetrain, gamePieceMechanism, autonomousRoutine, notes, updatedAt });
 
         saveStatus.textContent = 'Saved.';
         saveStatus.className = 'status-msg success';

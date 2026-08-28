@@ -7,7 +7,8 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 ## Features
 
 - **Light/dark theme** — follows your system setting by default; toggle it from the sidebar (or the login page) and it's remembered from then on.
-- **Team accounts** — sign up/log in with Firebase Auth; team number and name are looked up live from [FTCScout](https://ftcscout.org) as you type.
+- **Team accounts** — create a team (Firebase Auth + team number/name looked up live from [FTCScout](https://ftcscout.org) as you type), or join an existing one with a join code from a teammate. Everyone on a team shares the same data — robot profile, scouting log, chat, notebook, checklist — under their own individual login.
+- **Team Roster** — see everyone signed into your team, share/regenerate the join code, and set each person's name and role (roles are descriptive only — anyone on the team can edit or remove anyone else, there's no enforced hierarchy).
 - **Dashboard** — quick links and a snapshot of your robot profile.
 - **Robot profile** — log your drivetrain, game piece mechanism, and autonomous routine; this feeds the AI chat and event analysis.
 - **Scouting** — log opponent teams you see at events (drivetrain, scoring capability, driver skill, notes), with a driver-skill chart and CSV export.
@@ -16,7 +17,7 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 - **AI Chat** — ask questions about strategy, your robot, or the competition; the assistant is given your team, robot, scouting, and notebook data as context. Supports Markdown and LaTeX.
 - **Engineering Notebook** — log session entries and get instant AI feedback on each one (shown right in the list, no need to open anything), upload photos of physical notebook pages for AI feedback, upload a finished PDF/Word notebook for a holistic AI review, or have the AI pull your robot profile and every logged session together into a complete, judge-ready notebook write-up you can download.
 - **Pit Checklist** — a customisable pre-competition checklist.
-- **Settings** — manage your account, team info, and chat history; see roughly how much data your account has stored (in MB) with a button to wipe it all while keeping your login, or delete the account entirely; shows the current app version.
+- **Settings** — manage your account, team info, and chat history; see roughly how much data your team has stored (in MB) with a button to wipe it all while keeping every login, or delete just your own account (your team's shared data stays, since teammates may still need it); shows the current app version.
 
 ## Tech stack
 
@@ -42,6 +43,7 @@ schedule.html                Match schedule (current season)
 events.html                   Past/upcoming events, results, AI analysis
 chat.html                    AI chat
 engineering-notebook.html   Notebook entries, photos, final doc review
+roster.html                   Team roster — members, roles, join code
 pit-checklist.html          Pit checklist
 settings.html                 Account/team settings
 assets/style.css              Shared design system (tokens, layout, components)
@@ -63,7 +65,7 @@ To run your own copy, set these in **`assets/app.js`**:
 
 ### Firestore rules
 
-`firestore.rules` locks every collection Pit Wall uses to "only the signed-in user whose `uid` matches the document path can read or write it." It isn't deployed automatically — paste it into **Firebase Console → Firestore Database → Rules**, or run:
+Every team's data collections are keyed by a `teamId`, and `firestore.rules` locks them to "only someone on that team can read or write it" — team membership is looked up from a `members/{uid}` doc mapping each signed-in person to their team. The one deliberate exception is the `teams` collection itself, which allows public reads: joining a team by code has to look up the team *before* the new member has signed in, and this project has no backend function to gate that lookup more tightly. Team name/number aren't sensitive (they're public via FTCScout anyway); writes still require being on the team. `firestore.rules` isn't deployed automatically — paste it into **Firebase Console → Firestore Database → Rules**, or run:
 
 ```
 firebase deploy --only firestore:rules

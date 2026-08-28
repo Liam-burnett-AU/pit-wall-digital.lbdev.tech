@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>Pit Wall — Team Roster</title>
+<link rel="stylesheet" href="assets/style.css?v=7">
+<style>
+  .code-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+  .code-value { font-family: var(--font-mono); font-size: 30px; font-weight: 700; letter-spacing: 5px; color: var(--accent-text); }
+  .code-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .code-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .member-role { min-width: 140px; }
+  .member-name-input {
+    font-size: 15px; font-weight: 700; background: transparent; border: none; border-bottom: 1px solid transparent;
+    color: var(--text); padding: 2px 0; font-family: var(--font-body); outline: none; width: 100%;
+  }
+  .member-name-input:hover, .member-name-input:focus { border-bottom-color: var(--border); }
+  .member-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .you-badge { margin-left: 8px; }
+
+  .confirm-box { background: var(--danger-soft); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 16px; margin: 14px 0 0; }
+  .confirm-box p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+  .confirm-actions { display: flex; gap: 10px; }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+  <div class="app-shell">
+    <div id="navRoot"></div>
+
+    <div class="app-main">
+      <main class="page" id="mainContent" tabindex="-1">
+        <div class="state-block" id="loadingState">
+          <div style="max-width:420px; margin:0 auto; text-align:left;">
+            <div class="skeleton skeleton-block w-40"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-block w-80"></div>
+          </div>
+        </div>
+
+        <div class="state-block hidden" id="errorState">
+          <p id="errorMessage">Something went wrong.</p>
+          <p style="margin-top:10px;"><a href="dashboard.html">Back to dashboard</a></p>
+        </div>
+
+        <div id="pageContent" class="hidden">
+          <div class="page-head">
+            <div>
+              <h1>Team Roster</h1>
+              <p>Everyone signed into your team, with a code new teammates can use to join.</p>
+            </div>
+          </div>
+
+          <div class="card code-card">
+            <div>
+              <div class="code-label">Join code — share this with teammates</div>
+              <div class="code-value" id="joinCodeValue">——————</div>
+            </div>
+            <div class="code-actions">
+              <button type="button" class="btn btn-outline btn-sm" id="copyCodeBtn">Copy Code</button>
+              <button type="button" class="btn btn-outline btn-sm" id="regenCodeShowBtn">Regenerate</button>
+            </div>
+          </div>
+          <div id="regenCodeConfirm" class="confirm-box hidden" style="margin-bottom:24px;">
+            <p>This invalidates the old code — anyone who hasn't joined yet will need the new one. Current members aren't affected.</p>
+            <div class="confirm-actions">
+              <button type="button" class="btn btn-danger solid" id="regenCodeConfirmBtn">Yes, Regenerate</button>
+              <button type="button" class="btn btn-outline" id="regenCodeCancelBtn">Cancel</button>
+            </div>
+          </div>
+
+          <h2 class="section-label" id="membersHeading">Members</h2>
+          <div id="membersList"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, resolveTeamId, generateJoinCode } from "./assets/app.js?v=7";
+
+    document.getElementById('navRoot').innerHTML = renderNav('roster');
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    wireNav(auth, signOut);
+
+    const ROLE_OPTIONS = ['Owner', 'Captain', 'Mentor', 'Driver', 'Programmer', 'Builder', 'Member'];
+
+    let currentTeamId = null;
+    let currentUid = null;
+    let joinCode = '';
+
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+    const pageContent = document.getElementById('pageContent');
+    const membersList = document.getElementById('membersList');
+    const membersHeading = document.getElementById('membersHeading');
+
+    function showError(msg) {
+      loadingState.classList.add('hidden');
+      pageContent.classList.add('hidden');
+      errorMessage.textContent = msg;
+      errorState.classList.remove('hidden');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUid = user.uid;
+
+      try {
+        currentTeamId = await resolveTeamId(db, user);
+        const teamRef = doc(db, 'teams', currentTeamId);
+        const teamSnap = await getDoc(teamRef);
+        if (!teamSnap.exists()) {
+          showError('No team profile found for this account.');
+          return;
+        }
+        const team = teamSnap.data();
+        setTeamChip(team);
+
+        // Teams created before the roster feature shipped don't have a
+        // join code yet — generate and save one the first time this loads.
+        joinCode = team.joinCode;
+        if (!joinCode) {
+          joinCode = generateJoinCode();
+          await setDoc(teamRef, { joinCode }, { merge: true });
+        }
+        document.getElementById('joinCodeValue').textContent = joinCode;
+
+        loadingState.classList.add('hidden');
+        pageContent.classList.remove('hidden');
+
+        await loadMembers();
+
+      } catch (err) {
+        console.error(err);
+        showError("Couldn't load your roster. Check your connection and try again.");
+      }
+    });
+
+    async function loadMembers() {
+      membersList.innerHTML = '<div class="entries-empty">Loading members…</div>';
+      try {
+        const membersQuery = query(collection(db, 'members'), where('teamId', '==', currentTeamId));
+        const snap = await getDocs(membersQuery);
+        const members = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        members.sort((a, b) => (a.joinedAt || '').localeCompare(b.joinedAt || ''));
+
+        membersHeading.textContent = `Members (${members.length})`;
+
+        if (members.length === 0) {
+          membersList.innerHTML = '<div class="entries-empty">No members found.</div>';
+          return;
+        }
+
+        membersList.innerHTML = '';
+        members.forEach(m => membersList.appendChild(renderMemberCard(m)));
+
+      } catch (err) {
+        console.error(err);
+        membersList.innerHTML = '<div class="entries-empty">Couldn\'t load members — check your connection and try again.</div>';
+      }
+    }
+
+    function renderMemberCard(m) {
+      const isYou = m.uid === currentUid;
+      const joined = m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('en-AU') : 'Unknown date';
+
+      const card = document.createElement('div');
+      card.className = 'entry-card';
+      card.innerHTML = `
+        <div class="entry-head">
+          <div style="flex:1; min-width:0;">
+            <input type="text" class="member-name-input" value="${escapeHtml(m.displayName || 'Member')}" aria-label="Name" data-uid="${m.uid}">
+            ${isYou ? '<span class="badge accent you-badge">You</span>' : ''}
+            <div class="member-meta">Joined ${joined}</div>
+          </div>
+          <div class="entry-actions">
+            <select class="member-role" aria-label="Role" data-uid="${m.uid}">
+              ${ROLE_OPTIONS.map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" data-action="remove" data-uid="${m.uid}">Remove</button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector('.member-name-input').addEventListener('blur', (e) => saveDisplayName(m.uid, e.target.value));
+      card.querySelector('.member-name-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.target.blur();
+      });
+      card.querySelector('.member-role').addEventListener('change', (e) => saveRole(m.uid, e.target.value));
+      card.querySelector('[data-action="remove"]').addEventListener('click', () => removeMember(m.uid, m.displayName || 'this member', isYou));
+
+      return card;
+    }
+
+    async function saveDisplayName(uid, value) {
+      const name = value.trim();
+      if (!name) return;
+      try {
+        await updateDoc(doc(db, 'members', uid), { displayName: name });
+        toast('Name updated.', 'success');
+      } catch (err) {
+        console.error(err);
+        toast("Couldn't update name.", 'error');
+      }
+    }
+
+    async function saveRole(uid, role) {
+      try {
+        await updateDoc(doc(db, 'members', uid), { role });
+        toast('Role updated.', 'success');
+      } catch (err) {
+        console.error(err);
+        toast("Couldn't update role.", 'error');
+      }
+    }
+
+    async function removeMember(uid, name, isYou) {
+      const warning = isYou
+        ? `Remove yourself from the team? Your login stays active, but you'll start a fresh, empty team next time you sign in. This can't be undone.`
+        : `Remove ${name} from the team? Their login stays active, but they'll start a fresh, empty team next time they sign in. This can't be undone.`;
+      if (!confirm(warning)) return;
+
+      try {
+        await deleteDoc(doc(db, 'members', uid));
+        toast('Member removed.', 'success');
+        if (isYou) {
+          window.location.href = 'index.html';
+          return;
+        }
+        await loadMembers();
+      } catch (err) {
+        console.error(err);
+        toast("Couldn't remove member.", 'error');
+      }
+    }
+
+    document.getElementById('copyCodeBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(joinCode);
+        toast('Join code copied.', 'success');
+      } catch (err) {
+        toast(`Couldn't copy automatically — the code is ${joinCode}.`, 'error');
+      }
+    });
+
+    document.getElementById('regenCodeShowBtn').addEventListener('click', () => {
+      document.getElementById('regenCodeConfirm').classList.remove('hidden');
+    });
+    document.getElementById('regenCodeCancelBtn').addEventListener('click', () => {
+      document.getElementById('regenCodeConfirm').classList.add('hidden');
+    });
+    document.getElementById('regenCodeConfirmBtn').addEventListener('click', async () => {
+      try {
+        joinCode = generateJoinCode();
+        await setDoc(doc(db, 'teams', currentTeamId), { joinCode }, { merge: true });
+        document.getElementById('joinCodeValue').textContent = joinCode;
+        document.getElementById('regenCodeConfirm').classList.add('hidden');
+        toast('Join code regenerated.', 'success');
+      } catch (err) {
+        console.error(err);
+        toast("Couldn't regenerate the join code.", 'error');
+      }
+    });
+  </script>
+
+</body>
+</html>

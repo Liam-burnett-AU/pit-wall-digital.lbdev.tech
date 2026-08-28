@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Pit Checklist</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   .progress-ring-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .progress-text { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); text-align: right; }
@@ -83,7 +83,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=6";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('checklist');
 
@@ -92,7 +92,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
     let items = [];
 
     const DEFAULT_ITEMS = [
@@ -124,17 +124,16 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
         }
         setTeamChip(teamSnap.data());
 
-        const checklistSnap = await getDoc(doc(db, 'pitChecklist', user.uid));
+        const checklistSnap = await getDoc(doc(db, 'pitChecklist', currentTeamId));
         items = (checklistSnap.exists() && Array.isArray(checklistSnap.data().items))
           ? checklistSnap.data().items
           : DEFAULT_ITEMS;
@@ -171,7 +170,7 @@
 
     async function persist() {
       try {
-        await setDoc(doc(db, 'pitChecklist', currentUid), { items, updatedAt: new Date().toISOString() });
+        await setDoc(doc(db, 'pitChecklist', currentTeamId), { items, updatedAt: new Date().toISOString() });
       } catch (err) {
         console.error(err);
         toast("Couldn't save checklist changes.", 'error');

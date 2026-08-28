@@ -1,10 +1,15 @@
 // Shared config + helpers used by every Pit Wall page.
-// Firebase SDK calls stay in each page (so pages only import the pieces
-// they actually use) — this module holds the config value plus the
+// Firebase SDK calls mostly stay in each page (so pages only import the
+// pieces they actually use) — this module holds the config value plus the
 // app-specific glue: nav, toasts, markdown, and the third-party API calls.
+// The one exception is resolveTeamId() below, which every page needs
+// identically, so it imports Firestore directly rather than have every
+// caller pass their own doc/getDoc/setDoc in.
+
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Bump this on every deployed change — shown on the Settings page.
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.3.0";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
@@ -288,6 +293,7 @@ const NAV_ITEMS = [
   { key: 'events', href: 'events.html', icon: '🏆', label: 'Events' },
   { key: 'chat', href: 'chat.html', icon: '💬', label: 'AI Chat' },
   { key: 'notebook', href: 'engineering-notebook.html', icon: '📓', label: 'Notebook' },
+  { key: 'roster', href: 'roster.html', icon: '👥', label: 'Roster' },
   { key: 'checklist', href: 'pit-checklist.html', icon: '✅', label: 'Checklist' },
   { key: 'settings', href: 'settings.html', icon: '⚙️', label: 'Settings' }
 ];
@@ -376,6 +382,38 @@ export function wireNav(auth, signOutFn) {
 export function setTeamChip(team) {
   const el = document.getElementById('teamChip');
   if (el) el.textContent = `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+}
+
+// ===== Team membership =====
+// A team's data (teams/robots/scouting/notebook/... docs) has always been
+// keyed by its creator's Firebase Auth uid. To let more than one person
+// join a team without moving any of that existing data, each signed-in
+// person now has a members/{uid} doc pointing at the "team id" (still
+// just that original owner's uid) their data lives under. For anyone who
+// signed up before multi-member support existed, that doc doesn't exist
+// yet — this creates it the first time they load a page after this
+// version shipped, pointing at their own uid, so nothing about how their
+// data is stored has to change.
+export async function resolveTeamId(db, user) {
+  const memberSnap = await getDoc(doc(db, 'members', user.uid));
+  if (memberSnap.exists()) return memberSnap.data().teamId;
+
+  await setDoc(doc(db, 'members', user.uid), {
+    teamId: user.uid,
+    role: 'Owner',
+    displayName: user.email ? user.email.split('@')[0] : 'Member',
+    joinedAt: new Date().toISOString()
+  });
+  return user.uid;
+}
+
+// Short, human-typeable code for the "join a team" flow — excludes
+// characters that are easy to mix up (0/O, 1/I).
+export function generateJoinCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
 }
 
 // ===== Accessible modal open/close =====

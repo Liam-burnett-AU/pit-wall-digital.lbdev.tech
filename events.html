@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Events</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   .event-card { margin-bottom: 14px; }
   .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
@@ -116,8 +116,8 @@
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
       ftcEventsFetch, fetchTeamEventsAcrossSeasons, ftcScoutFetch, renderKeyValueList, callGroq,
-      openModal, closeModal
-    } from "./assets/app.js?v=6";
+      openModal, closeModal, resolveTeamId
+    } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
 
@@ -126,7 +126,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
     let teamNumber = null;
     let robotContext = null;
     let scoutingContext = [];
@@ -156,10 +156,9 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
@@ -174,9 +173,9 @@
         }
 
         const [robotSnap, scoutingSnap, notebookSnap] = await Promise.all([
-          getDoc(doc(db, 'robots', user.uid)),
-          getDocs(query(collection(db, 'scouting', user.uid, 'entries'), orderBy('createdAt', 'desc'), limit(30))),
-          getDocs(query(collection(db, 'engineeringNotebook', user.uid, 'entries'), orderBy('date', 'desc'), limit(20)))
+          getDoc(doc(db, 'robots', currentTeamId)),
+          getDocs(query(collection(db, 'scouting', currentTeamId, 'entries'), orderBy('createdAt', 'desc'), limit(30))),
+          getDocs(query(collection(db, 'engineeringNotebook', currentTeamId, 'entries'), orderBy('date', 'desc'), limit(20)))
         ]);
         robotContext = robotSnap.exists() ? robotSnap.data() : null;
         scoutingContext = scoutingSnap.docs.map(d => d.data()).filter(e => !e.disregarded);
@@ -686,7 +685,7 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
 
       matchFeedbackQueue = matchFeedbackQueue.then(async () => {
         try {
-          const cached = await getDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId));
+          const cached = await getDoc(doc(db, 'matchAnalysis', currentTeamId, 'matches', docId));
           if (cached.exists()) {
             applyResult(cached.data().analysis);
             return;
@@ -707,7 +706,7 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
           const analysis = data?.choices?.[0]?.message?.content;
           if (!analysis) throw new Error('No feedback returned.');
 
-          await setDoc(doc(db, 'matchAnalysis', currentUid, 'matches', docId), {
+          await setDoc(doc(db, 'matchAnalysis', currentTeamId, 'matches', docId), {
             eventCode: event.code,
             matchNumber: match.matchNumber,
             tournamentLevel: match.tournamentLevel || 'qual',
@@ -772,7 +771,7 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
       block.innerHTML = '';
       document.getElementById('analysisBtn').textContent = 'Get AI Performance Analysis';
       try {
-        const snap = await getDoc(doc(db, 'eventAnalysis', currentUid, 'events', event.code));
+        const snap = await getDoc(doc(db, 'eventAnalysis', currentTeamId, 'events', event.code));
         if (snap.exists() && event === currentPastEvent) {
           renderAnalysis(snap.data());
           document.getElementById('analysisBtn').textContent = 'Regenerate Analysis';
@@ -865,7 +864,7 @@ Be specific and reference the actual data provided (scores, win/loss pattern, no
         if (!analysis) throw new Error('No analysis returned from the AI.');
 
         const generatedAt = new Date().toISOString();
-        await setDoc(doc(db, 'eventAnalysis', currentUid, 'events', event.code), {
+        await setDoc(doc(db, 'eventAnalysis', currentTeamId, 'events', event.code), {
           eventName: event.name, eventCode: event.code, analysis, generatedAt
         });
 

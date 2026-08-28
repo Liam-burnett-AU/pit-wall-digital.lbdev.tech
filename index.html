@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Team Access</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   body { overflow-x: hidden; }
   .split {
@@ -130,8 +130,8 @@
   .tab {
     flex: 1;
     text-align: center;
-    padding: 10px 0;
-    font-size: 14px;
+    padding: 10px 4px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-muted);
     background: transparent;
@@ -195,7 +195,8 @@
       <div class="form-card">
         <div class="tabs">
           <button class="tab active" id="tabLogin" type="button">Log In</button>
-          <button class="tab" id="tabSignup" type="button">Sign Up</button>
+          <button class="tab" id="tabSignup" type="button">Create Team</button>
+          <button class="tab" id="tabJoin" type="button">Join Team</button>
         </div>
 
         <!-- LOGIN -->
@@ -258,6 +259,32 @@
           <div class="status-msg" id="signupMsg"></div>
         </div>
 
+        <!-- JOIN -->
+        <div id="joinForm" class="hidden">
+          <h1 class="form-title">Join your team</h1>
+          <p class="form-subtitle">Ask a teammate for the join code on their Roster page.</p>
+
+          <div class="field">
+            <label for="joinDisplayName">Your name</label>
+            <input type="text" id="joinDisplayName" placeholder="e.g. Alex" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="joinCode">Join code</label>
+            <input type="text" id="joinCode" placeholder="e.g. 7K2QXM" autocomplete="off" style="text-transform:uppercase; letter-spacing:1.5px; font-family:var(--font-mono);">
+          </div>
+          <div class="field">
+            <label for="joinEmail">Email</label>
+            <input type="email" id="joinEmail" placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="joinPassword">Password</label>
+            <input type="password" id="joinPassword" placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+
+          <button class="btn btn-primary btn-block" id="joinBtn" type="button">Join Team</button>
+          <div class="status-msg" id="joinMsg"></div>
+        </div>
+
         <p class="fine-print">Assessment build — Sheldon College Digital Technologies, Term 2 2026</p>
       </div>
     </div>
@@ -270,8 +297,8 @@
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, wireTeamLookup, getTheme, setTheme } from "./assets/app.js?v=6";
+    import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, toast, wireTeamLookup, getTheme, setTheme, generateJoinCode } from "./assets/app.js?v=7";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -282,18 +309,22 @@
 
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
+    const joinForm = document.getElementById('joinForm');
     const tabLogin = document.getElementById('tabLogin');
     const tabSignup = document.getElementById('tabSignup');
+    const tabJoin = document.getElementById('tabJoin');
 
     function setMode(mode) {
-      const isLogin = mode === 'login';
-      loginForm.classList.toggle('hidden', !isLogin);
-      signupForm.classList.toggle('hidden', isLogin);
-      tabLogin.classList.toggle('active', isLogin);
-      tabSignup.classList.toggle('active', !isLogin);
+      loginForm.classList.toggle('hidden', mode !== 'login');
+      signupForm.classList.toggle('hidden', mode !== 'signup');
+      joinForm.classList.toggle('hidden', mode !== 'join');
+      tabLogin.classList.toggle('active', mode === 'login');
+      tabSignup.classList.toggle('active', mode === 'signup');
+      tabJoin.classList.toggle('active', mode === 'join');
     }
     tabLogin.addEventListener('click', () => setMode('login'));
     tabSignup.addEventListener('click', () => setMode('signup'));
+    tabJoin.addEventListener('click', () => setMode('join'));
 
     function showMsg(el, text, type) {
       el.textContent = text;
@@ -312,6 +343,9 @@
     });
     document.getElementById('signupPassword').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('signupBtn').click();
+    });
+    document.getElementById('joinPassword').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('joinBtn').click();
     });
 
     // FRC isn't supported yet — grey out the signup fields when selected
@@ -385,6 +419,7 @@
           teamName,
           teamNumber,
           competition: competition || 'FTC',
+          joinCode: generateJoinCode(),
           createdAt: new Date().toISOString()
         });
         showMsg(msg, 'Account created. Redirecting to dashboard...', 'success');
@@ -394,6 +429,54 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Create Account';
+      }
+    });
+
+    document.getElementById('joinBtn').addEventListener('click', async () => {
+      const displayName = document.getElementById('joinDisplayName').value.trim();
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
+      const email = document.getElementById('joinEmail').value.trim();
+      const password = document.getElementById('joinPassword').value;
+      const btn = document.getElementById('joinBtn');
+      const msg = document.getElementById('joinMsg');
+
+      if (!displayName || !code || !email || !password) {
+        showMsg(msg, 'Fill in your name, the join code, email, and password.', 'error');
+        return;
+      }
+      if (password.length < 6) {
+        showMsg(msg, 'Password needs to be at least 6 characters.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Checking code...';
+      try {
+        const teamsQuery = query(collection(db, 'teams'), where('joinCode', '==', code));
+        const matches = await getDocs(teamsQuery);
+        if (matches.empty) {
+          showMsg(msg, "No team found with that code — check it and try again.", 'error');
+          btn.disabled = false;
+          btn.textContent = 'Join Team';
+          return;
+        }
+        const teamDoc = matches.docs[0];
+
+        btn.textContent = 'Joining...';
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'members', cred.user.uid), {
+          teamId: teamDoc.id,
+          role: 'Member',
+          displayName,
+          joinedAt: new Date().toISOString()
+        });
+        showMsg(msg, 'Joined the team. Redirecting to dashboard...', 'success');
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showMsg(msg, friendlyError(err), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Join Team';
       }
     });
 

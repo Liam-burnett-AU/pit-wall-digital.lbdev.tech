@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Engineering Notebook</title>
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <style>
   .form-card { margin-bottom: 32px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -166,8 +166,8 @@
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
-      callGroq, uploadToCloudinary, VISION_MODEL, openModal, closeModal
-    } from "./assets/app.js?v=6";
+      callGroq, uploadToCloudinary, VISION_MODEL, openModal, closeModal, resolveTeamId
+    } from "./assets/app.js?v=7";
 
     document.getElementById('navRoot').innerHTML = renderNav('notebook');
 
@@ -176,7 +176,7 @@
     const db = getFirestore(app);
     wireNav(auth, signOut);
 
-    let currentUid = null;
+    let currentTeamId = null;
     let currentModalEntryId = null;
     let currentModalPhotoId = null;
     let allEntries = [];
@@ -203,10 +203,9 @@
         window.location.href = 'index.html';
         return;
       }
-      currentUid = user.uid;
-
       try {
-        const teamSnap = await getDoc(doc(db, 'teams', user.uid));
+        currentTeamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', currentTeamId));
         if (!teamSnap.exists()) {
           showError('No team profile found for this account.');
           return;
@@ -249,7 +248,7 @@
       btn.textContent = 'Saving...';
 
       try {
-        const docRef = await addDoc(collection(db, 'engineeringNotebook', currentUid, 'entries'), {
+        const docRef = await addDoc(collection(db, 'engineeringNotebook', currentTeamId, 'entries'), {
           date, title, task, reflection, aiFeedback: null, createdAt: new Date().toISOString()
         });
 
@@ -286,7 +285,7 @@
         ]);
         const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
 
-        await updateDoc(doc(db, 'engineeringNotebook', currentUid, 'entries', entryId), { aiFeedback: feedback });
+        await updateDoc(doc(db, 'engineeringNotebook', currentTeamId, 'entries', entryId), { aiFeedback: feedback });
         await loadEntries();
 
         if (currentModalEntryId === entryId) openEntryModal(entryId, { ...entry, aiFeedback: feedback });
@@ -300,7 +299,7 @@
     async function loadEntries() {
       const list = document.getElementById('entriesList');
       try {
-        const q = query(collection(db, 'engineeringNotebook', currentUid, 'entries'), orderBy('date', 'desc'));
+        const q = query(collection(db, 'engineeringNotebook', currentTeamId, 'entries'), orderBy('date', 'desc'));
         const snap = await getDocs(q);
 
         allEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -361,7 +360,7 @@
     async function deleteEntry(entryId) {
       if (!confirm("Delete this notebook entry? This can't be undone.")) return;
       try {
-        await deleteDoc(doc(db, 'engineeringNotebook', currentUid, 'entries', entryId));
+        await deleteDoc(doc(db, 'engineeringNotebook', currentTeamId, 'entries', entryId));
         toast('Entry deleted.', 'success');
         await loadEntries();
       } catch (err) {
@@ -453,7 +452,7 @@
       try {
         for (const file of files) {
           const { url, bytes } = await uploadToCloudinary(file, 'image');
-          await addDoc(collection(db, 'notebookPhotos', currentUid, 'photos'), {
+          await addDoc(collection(db, 'notebookPhotos', currentTeamId, 'photos'), {
             url, bytes, filename: file.name, aiFeedback: null, uploadedAt: new Date().toISOString()
           });
         }
@@ -478,7 +477,7 @@
     async function loadPhotos() {
       const grid = document.getElementById('photosGrid');
       try {
-        const q = query(collection(db, 'notebookPhotos', currentUid, 'photos'), orderBy('uploadedAt', 'desc'));
+        const q = query(collection(db, 'notebookPhotos', currentTeamId, 'photos'), orderBy('uploadedAt', 'desc'));
         const snap = await getDocs(q);
 
         allPhotos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -532,7 +531,7 @@
         ], VISION_MODEL);
         const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
 
-        await updateDoc(doc(db, 'notebookPhotos', currentUid, 'photos', photoId), { aiFeedback: feedback });
+        await updateDoc(doc(db, 'notebookPhotos', currentTeamId, 'photos', photoId), { aiFeedback: feedback });
         toast('Feedback ready.', 'success');
         await loadPhotos();
 
@@ -549,7 +548,7 @@
     async function deletePhoto(photoId) {
       if (!confirm('Remove this photo from your notebook? (The file stays on Cloudinary\'s free storage since unsigned uploads can\'t be deleted from the browser — this just removes it from your notebook.)')) return;
       try {
-        await deleteDoc(doc(db, 'notebookPhotos', currentUid, 'photos', photoId));
+        await deleteDoc(doc(db, 'notebookPhotos', currentTeamId, 'photos', photoId));
         toast('Photo removed from notebook.', 'success');
         await loadPhotos();
       } catch (err) {
@@ -627,7 +626,7 @@
           status.className = 'status-msg error';
         }
 
-        await setDoc(doc(db, 'notebookFinal', currentUid), { url, bytes, filename: file.name, uploadedAt: new Date().toISOString(), aiFeedback: null });
+        await setDoc(doc(db, 'notebookFinal', currentTeamId), { url, bytes, filename: file.name, uploadedAt: new Date().toISOString(), aiFeedback: null });
         toast('Notebook document uploaded.', 'success');
         await renderFinalDoc();
 
@@ -661,8 +660,8 @@
         ]);
         const feedback = data?.choices?.[0]?.message?.content || 'No feedback returned.';
 
-        const existing = await getDoc(doc(db, 'notebookFinal', currentUid));
-        await setDoc(doc(db, 'notebookFinal', currentUid), { ...existing.data(), aiFeedback: feedback });
+        const existing = await getDoc(doc(db, 'notebookFinal', currentTeamId));
+        await setDoc(doc(db, 'notebookFinal', currentTeamId), { ...existing.data(), aiFeedback: feedback });
         await renderFinalDoc();
 
       } catch (err) {
@@ -674,7 +673,7 @@
     async function renderFinalDoc() {
       const card = document.getElementById('finalDocCard');
       try {
-        const snap = await getDoc(doc(db, 'notebookFinal', currentUid));
+        const snap = await getDoc(doc(db, 'notebookFinal', currentTeamId));
         if (!snap.exists()) {
           card.innerHTML = '<div class="entries-empty">No final version uploaded yet.</div>';
           return;
@@ -755,7 +754,7 @@ Don't invent information that isn't in the data. If very little data is availabl
 
     async function loadGeneratedNotebook() {
       try {
-        const snap = await getDoc(doc(db, 'generatedNotebook', currentUid));
+        const snap = await getDoc(doc(db, 'generatedNotebook', currentTeamId));
         if (snap.exists()) renderGeneratedNotebook(snap.data());
       } catch (err) {
         console.error("Couldn't load generated notebook", err);
@@ -794,7 +793,7 @@ Don't invent information that isn't in the data. If very little data is availabl
       `;
 
       try {
-        const robotSnap = await getDoc(doc(db, 'robots', currentUid));
+        const robotSnap = await getDoc(doc(db, 'robots', currentTeamId));
         const robot = robotSnap.exists() ? robotSnap.data() : null;
 
         const prompt = buildFullNotebookPrompt(teamContext, robot, allEntries, allPhotos);
@@ -807,7 +806,7 @@ Don't invent information that isn't in the data. If very little data is availabl
         if (!content) throw new Error('No notebook content returned.');
 
         const generatedAt = new Date().toISOString();
-        await setDoc(doc(db, 'generatedNotebook', currentUid), { content, generatedAt });
+        await setDoc(doc(db, 'generatedNotebook', currentTeamId), { content, generatedAt });
 
         renderGeneratedNotebook({ content, generatedAt });
         status.textContent = 'Notebook generated.';
