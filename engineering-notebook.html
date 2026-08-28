@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Engineering Notebook</title>
-<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=5">
 <style>
   .form-card { margin-bottom: 32px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -166,7 +166,7 @@
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
       callGroq, uploadToCloudinary, VISION_MODEL, openModal, closeModal
-    } from "./assets/app.js?v=4";
+    } from "./assets/app.js?v=5";
 
     document.getElementById('navRoot').innerHTML = renderNav('notebook');
 
@@ -451,9 +451,9 @@
 
       try {
         for (const file of files) {
-          const url = await uploadToCloudinary(file, 'image');
+          const { url, bytes } = await uploadToCloudinary(file, 'image');
           await addDoc(collection(db, 'notebookPhotos', currentUid, 'photos'), {
-            url, filename: file.name, aiFeedback: null, uploadedAt: new Date().toISOString()
+            url, bytes, filename: file.name, aiFeedback: null, uploadedAt: new Date().toISOString()
           });
         }
 
@@ -614,7 +614,7 @@
       status.className = 'status-msg';
 
       try {
-        const url = await uploadToCloudinary(file, 'raw');
+        const { url, bytes } = await uploadToCloudinary(file, 'raw');
 
         btn.textContent = 'Reading document...';
         let extractedText = '';
@@ -626,7 +626,7 @@
           status.className = 'status-msg error';
         }
 
-        await setDoc(doc(db, 'notebookFinal', currentUid), { url, filename: file.name, uploadedAt: new Date().toISOString(), aiFeedback: null });
+        await setDoc(doc(db, 'notebookFinal', currentUid), { url, bytes, filename: file.name, uploadedAt: new Date().toISOString(), aiFeedback: null });
         toast('Notebook document uploaded.', 'success');
         await renderFinalDoc();
 

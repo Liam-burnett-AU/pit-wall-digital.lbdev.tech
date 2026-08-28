@@ -3,6 +3,9 @@
 // they actually use) — this module holds the config value plus the
 // app-specific glue: nav, toasts, markdown, and the third-party API calls.
 
+// Bump this on every deployed change — shown on the Settings page.
+export const APP_VERSION = "1.1.0";
+
 export const firebaseConfig = {
   apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
   authDomain: "lb-dev-2444f.firebaseapp.com",
@@ -203,7 +206,7 @@ export async function uploadToCloudinary(file, resourceType) {
     throw new Error(`Cloudinary upload failed (${res.status}): ${errBody}`);
   }
   const data = await res.json();
-  return data.secure_url;
+  return { url: data.secure_url, bytes: data.bytes };
 }
 
 // ===== FTC team number/name lookup (signup, scouting, settings) =====

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Settings</title>
-<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=5">
 <style>
   h1.page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 30px; }
   .settings-section { margin-bottom: 20px; }
@@ -93,6 +93,24 @@
           </div>
 
           <div class="settings-section card">
+            <h2>Data Usage</h2>
+            <p class="section-desc">How much data your account has stored in Pit Wall — every entry, photo, chat message, and cached AI response.</p>
+            <div class="current-value" id="dataUsageValue">Calculating…</div>
+            <div class="flex items-center gap-12 flex-wrap">
+              <button type="button" class="btn btn-outline btn-sm" id="refreshUsageBtn">Refresh</button>
+              <button type="button" class="btn btn-danger btn-sm" id="deleteAllDataShowBtn">Delete All My Data</button>
+            </div>
+            <div id="deleteAllDataConfirm" class="confirm-box hidden">
+              <p>This permanently deletes every entry, photo, chat message, and cached AI response in your account — robot profile, scouting log, notebook, checklist, everything. Your login and team number stay, so you can start fresh. This can't be undone.</p>
+              <div class="confirm-actions">
+                <button type="button" class="btn btn-danger solid" id="deleteAllDataConfirmBtn">Yes, Delete All My Data</button>
+                <button type="button" class="btn btn-outline" id="deleteAllDataCancelBtn">Cancel</button>
+              </div>
+            </div>
+            <div class="status-msg" id="deleteAllDataStatus"></div>
+          </div>
+
+          <div class="settings-section card">
             <h2>Chat History</h2>
             <p class="section-desc">Permanently clears everything in your AI chat. Your team and robot profile aren't affected.</p>
             <button type="button" class="btn btn-outline" id="clearChatShowBtn">Clear Chat History</button>
@@ -108,7 +126,7 @@
 
           <div class="settings-section danger card">
             <h2 class="danger-title">Delete Account</h2>
-            <p class="section-desc">Permanently deletes your account, team profile, robot profile, and chat history. This cannot be undone.</p>
+            <p class="section-desc">Permanently deletes your account and every piece of data tied to it — team profile, robot profile, scouting log, notebook, checklist, chat history, cached AI analysis, everything. This cannot be undone.</p>
 
             <div class="field">
               <label for="deleteAccountPassword">Current password (to confirm it's you)</label>
@@ -126,6 +144,8 @@
             <div class="status-msg" id="deleteAccountStatus"></div>
           </div>
 
+          <p class="mono faint" style="text-align:center; font-size:11.5px; margin-top:8px;" id="versionLine">Pit Wall</p>
+
         </div>
       </main>
     </div>
@@ -137,8 +157,10 @@
       getAuth, onAuthStateChanged, sendPasswordResetEmail, verifyBeforeUpdateEmail,
       reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=4";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION } from "./assets/app.js?v=5";
+
+    document.getElementById('versionLine').textContent = `Pit Wall v${APP_VERSION}`;
 
     document.getElementById('navRoot').innerHTML = renderNav('settings');
 
@@ -192,9 +214,109 @@
         loadingState.classList.add('hidden');
         settingsContent.classList.remove('hidden');
 
+        renderDataUsage();
+
       } catch (err) {
         console.error(err);
         showError("Couldn't load your settings. Check your connection and try again.");
+      }
+    });
+
+    // ==================== DATA USAGE / DELETE ALL DATA ====================
+
+    // Everything except `teams` — kept separate so "Delete All My Data" can
+    // wipe it while leaving the team's identity/login intact, and "Delete
+    // Account" can wipe it all including `teams` right before removing the
+    // Auth user.
+    const SINGLE_DOC_COLLECTIONS = ['robots', 'chatHistory', 'pitChecklist', 'notebookFinal', 'generatedNotebook'];
+    const SUBCOLLECTIONS = [
+      { name: 'scouting', sub: 'entries' },
+      { name: 'engineeringNotebook', sub: 'entries' },
+      { name: 'notebookPhotos', sub: 'photos' },
+      { name: 'eventAnalysis', sub: 'events' },
+      { name: 'matchAnalysis', sub: 'matches' }
+    ];
+
+    // Approximates a document's storage footprint from its JSON size, plus
+    // any uploaded-file `bytes` field the doc carries (Cloudinary photos and
+    // the final notebook upload record their real file size at upload time).
+    function blobSize(obj) {
+      try { return new Blob([JSON.stringify(obj)]).size; } catch (err) { return 0; }
+    }
+
+    async function calculateDataUsage(uid) {
+      let totalBytes = 0;
+
+      const teamSnap = await getDoc(doc(db, 'teams', uid));
+      if (teamSnap.exists()) totalBytes += blobSize(teamSnap.data());
+
+      for (const col of SINGLE_DOC_COLLECTIONS) {
+        const snap = await getDoc(doc(db, col, uid));
+        if (!snap.exists()) continue;
+        const data = snap.data();
+        totalBytes += blobSize(data);
+        if (typeof data.bytes === 'number') totalBytes += data.bytes;
+      }
+
+      for (const { name, sub } of SUBCOLLECTIONS) {
+        const snap = await getDocs(collection(db, name, uid, sub));
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          totalBytes += blobSize(data);
+          if (typeof data.bytes === 'number') totalBytes += data.bytes;
+        });
+      }
+
+      return totalBytes;
+    }
+
+    async function renderDataUsage() {
+      const el = document.getElementById('dataUsageValue');
+      el.textContent = 'Calculating…';
+      try {
+        const bytes = await calculateDataUsage(currentUser.uid);
+        const mb = bytes / (1024 * 1024);
+        el.innerHTML = `<span class="accent-text" style="font-size:18px; font-weight:700;">${mb.toFixed(2)} MB</span> <span class="muted">stored across your account</span>`;
+      } catch (err) {
+        console.error('Data usage error:', err);
+        el.textContent = "Couldn't calculate — check your connection and try again.";
+      }
+    }
+
+    document.getElementById('refreshUsageBtn').addEventListener('click', renderDataUsage);
+
+    // Deletes everything in SINGLE_DOC_COLLECTIONS/SUBCOLLECTIONS for this
+    // uid, and `teams` too if deleteTeam is set. Deleting a doc that doesn't
+    // exist is a no-op in Firestore, so no existence checks are needed here.
+    async function wipeAllCollections(uid, { deleteTeam }) {
+      const deletions = SINGLE_DOC_COLLECTIONS.map(col => deleteDoc(doc(db, col, uid)));
+      if (deleteTeam) deletions.push(deleteDoc(doc(db, 'teams', uid)));
+
+      for (const { name, sub } of SUBCOLLECTIONS) {
+        const snap = await getDocs(collection(db, name, uid, sub));
+        snap.forEach((docSnap) => deletions.push(deleteDoc(docSnap.ref)));
+      }
+
+      await Promise.allSettled(deletions);
+    }
+
+    document.getElementById('deleteAllDataShowBtn').addEventListener('click', () => showConfirm('deleteAllData'));
+    document.getElementById('deleteAllDataCancelBtn').addEventListener('click', () => hideConfirm('deleteAllData'));
+    document.getElementById('deleteAllDataConfirmBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('deleteAllDataConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+      try {
+        await wipeAllCollections(currentUser.uid, { deleteTeam: false });
+        hideConfirm('deleteAllData');
+        setStatus('deleteAllDataStatus', 'All your data has been deleted. Your login and team profile are unaffected.', 'success');
+        renderDataUsage();
+      } catch (err) {
+        console.error(err);
+        setStatus('deleteAllDataStatus', "Couldn't delete all your data — check your connection and try again.", 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Yes, Delete All My Data';
       }
     });
 
@@ -302,11 +424,7 @@
 
       try {
         await reauthenticate(password);
-        await Promise.allSettled([
-          deleteDoc(doc(db, 'teams', currentUser.uid)),
-          deleteDoc(doc(db, 'robots', currentUser.uid)),
-          deleteDoc(doc(db, 'chatHistory', currentUser.uid))
-        ]);
+        await wipeAllCollections(currentUser.uid, { deleteTeam: true });
         await deleteUser(currentUser);
         window.location.href = 'index.html';
       } catch (err) {

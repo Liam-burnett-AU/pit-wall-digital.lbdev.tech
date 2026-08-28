@@ -15,7 +15,7 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 - **AI Chat** — ask questions about strategy, your robot, or the competition; the assistant is given your team, robot, scouting, and notebook data as context. Supports Markdown and LaTeX.
 - **Engineering Notebook** — log session entries and get instant AI feedback on each one (shown right in the list, no need to open anything), upload photos of physical notebook pages for AI feedback, upload a finished PDF/Word notebook for a holistic AI review, or have the AI pull your robot profile and every logged session together into a complete, judge-ready notebook write-up you can download.
 - **Pit Checklist** — a customisable pre-competition checklist.
-- **Settings** — manage your account, team info, chat history, and account deletion.
+- **Settings** — manage your account, team info, and chat history; see roughly how much data your account has stored (in MB) with a button to wipe it all while keeping your login, or delete the account entirely; shows the current app version.
 
 ## Tech stack
 
@@ -71,6 +71,10 @@ firebase deploy --only firestore:rules
 ## Deployment
 
 This is a static site with no build step — GitHub Pages serves the `main` branch directly. Push to `main` and it's live.
+
+## Versioning
+
+`APP_VERSION` in `assets/app.js` is shown at the bottom of the Settings page. Bump it with every change that ships — patch (`1.0.x`) for fixes/tweaks, minor (`1.x.0`) for new features, major (`x.0.0`) for a significant redesign or breaking change.
 
 ---
 
