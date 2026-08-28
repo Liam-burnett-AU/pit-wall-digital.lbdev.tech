@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — AI Chat</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/style.css?v=6">
 <style>
   html, body { height: 100%; overflow: hidden; }
   .app-shell { height: 100vh; height: 100dvh; }
@@ -55,7 +56,7 @@
     border: 1px solid var(--border); padding: 8px 13px; border-radius: 20px; cursor: pointer;
     background: var(--surface); transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
-  .suggestion-chip:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
+  .suggestion-chip:hover { border-color: var(--accent-border); color: var(--accent-text); background: var(--accent-soft); }
 
   .message-row { display: flex; gap: 10px; align-items: flex-end; }
   .message-row.user { justify-content: flex-end; }
@@ -75,7 +76,7 @@
   .bubble { padding: 12px 16px; border-radius: 14px; font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; box-shadow: var(--shadow-sm); }
   .bubble.user { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
   .bubble.assistant { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
-  .bubble.assistant.error { border-color: var(--danger-border); color: var(--danger); }
+  .bubble.assistant.error { border-color: var(--danger-border); color: var(--danger-text); }
   .bubble.assistant .katex { color: var(--text); font-size: 1.02em; }
 
   .msg-time { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); margin-top: 5px; padding: 0 4px; }
@@ -98,7 +99,7 @@
     background: rgba(163, 193, 231, 0.05); border: 1px solid var(--border); border-radius: 22px;
     padding: 6px 8px 6px 18px; transition: border-color 0.15s ease;
   }
-  .input-inner:focus-within { border-color: var(--accent); }
+  .input-inner:focus-within { border-color: var(--accent-text); }
   #chatInput {
     flex: 1; resize: none; min-height: 24px; max-height: 140px;
     padding: 10px 0; background: transparent; border: none;
@@ -170,7 +171,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js?v=5";
+    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js?v=6";
 
     document.getElementById('navRoot').innerHTML = renderNav('chat');
 

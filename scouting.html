@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Scouting</title>
-<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/style.css?v=6">
 <style>
   .form-card { margin-bottom: 30px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
-  .form-card h2 .editing-tag { font-family: var(--font-mono); font-size: 11px; color: var(--accent); font-weight: 400; margin-left: 8px; }
+  .form-card h2 .editing-tag { font-family: var(--font-mono); font-size: 11px; color: var(--accent-text); font-weight: 400; margin-left: 8px; }
 
   .chart-card { margin-bottom: 24px; }
   .chart-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -140,7 +141,7 @@
     import {
       getFirestore, doc, getDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=5";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=6";
 
     document.getElementById('navRoot').innerHTML = renderNav('scouting');
 

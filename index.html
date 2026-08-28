@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Team Access</title>
-<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/style.css?v=6">
 <style>
   body { overflow-x: hidden; }
   .split {
@@ -13,25 +14,35 @@
     min-height: 100vh;
   }
 
+  /* The hero panel is a fixed dark brand panel — it stays this way in
+     both themes, so it gets its own local tokens instead of the
+     theme-adaptive ones (which would make its text invisible against
+     this background once the page can also render light). */
   .hero {
+    --hero-text: #f4f7fb;
+    --hero-text-muted: #9db3d6;
+    --hero-border: rgba(163, 193, 231, 0.14);
+    --hero-accent: #fbd708;
+    --hero-link: #7db4ff;
     position: relative;
     background:
       radial-gradient(circle at 20% 15%, rgba(251,215,8,0.08), transparent 45%),
-      linear-gradient(160deg, #0f2043 0%, var(--bg) 85%);
+      linear-gradient(160deg, #0f2043 0%, #0a1524 85%);
+    color: var(--hero-text);
     padding: 60px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     overflow: hidden;
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--hero-border);
   }
   .hero::before {
     content: "";
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      linear-gradient(var(--hero-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hero-border) 1px, transparent 1px);
     background-size: 42px 42px;
     opacity: 0.4;
     mask-image: radial-gradient(circle at 25% 25%, black, transparent 68%);
@@ -51,7 +62,7 @@
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 3px;
-    color: var(--accent);
+    color: var(--hero-accent);
     text-transform: uppercase;
     margin-bottom: 18px;
   }
@@ -61,8 +72,8 @@
     line-height: 1.08;
     letter-spacing: -0.5px;
   }
-  .hero-headline span { color: var(--link); }
-  .hero-sub { margin-top: 20px; max-width: 440px; color: var(--text-muted); font-size: 15px; line-height: 1.65; }
+  .hero-headline span { color: var(--hero-link); }
+  .hero-sub { margin-top: 20px; max-width: 440px; color: var(--hero-text-muted); font-size: 15px; line-height: 1.65; }
 
   .hero-features {
     z-index: 1;
@@ -77,9 +88,9 @@
     align-items: flex-start;
     gap: 9px;
     font-size: 12.5px;
-    color: var(--text-muted);
+    color: var(--hero-text-muted);
   }
-  .hero-feature .dot { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+  .hero-feature .dot { color: var(--hero-accent); flex-shrink: 0; margin-top: 1px; }
 
   .status-strip {
     z-index: 1;
@@ -87,18 +98,18 @@
     gap: 28px;
     font-family: var(--font-mono);
     font-size: 11.5px;
-    color: var(--text-muted);
-    border-top: 1px solid var(--border);
+    color: var(--hero-text-muted);
+    border-top: 1px solid var(--hero-border);
     padding-top: 18px;
     flex-wrap: wrap;
     margin-top: 40px;
   }
   .status-strip .live-dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: var(--accent);
+    background: var(--hero-accent);
     display: inline-block;
     margin-right: 7px;
-    box-shadow: 0 0 6px var(--accent);
+    box-shadow: 0 0 6px var(--hero-accent);
   }
 
   .form-panel {
@@ -147,6 +158,11 @@
 <body>
 
   <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" style="position:fixed; top:20px; right:20px; z-index:50;">
+    <span class="icon-sun" aria-hidden="true">☀️</span>
+    <span class="icon-moon" aria-hidden="true">🌙</span>
+  </button>
 
   <div class="split">
     <div class="hero">
@@ -255,11 +271,14 @@
       signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, wireTeamLookup } from "./assets/app.js?v=5";
+    import { firebaseConfig, toast, wireTeamLookup, getTheme, setTheme } from "./assets/app.js?v=6";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    setTheme(getTheme()); // sync the toggle's aria-label to whatever the early inline script already applied
+    document.getElementById('themeToggle').addEventListener('click', () => setTheme(getTheme() === 'light' ? 'dark' : 'light'));
 
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');

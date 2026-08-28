@@ -3,29 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Pit Checklist</title>
-<link rel="stylesheet" href="assets/style.css?v=5">
+<link rel="stylesheet" href="assets/style.css?v=6">
 <style>
   .progress-ring-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .progress-text { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); text-align: right; }
-  .progress-text .count { color: var(--accent); font-size: 18px; font-weight: 700; display: block; }
+  .progress-text .count { color: var(--accent-text); font-size: 18px; font-weight: 700; display: block; }
 
   .checklist-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px; margin-bottom: 22px; }
   .checklist-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
   .checklist-item:last-child { border-bottom: none; }
-  .checklist-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .checklist-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-text); cursor: pointer; flex-shrink: 0; }
   .checklist-item label { flex: 1; font-size: 14.5px; cursor: pointer; transition: color 0.15s ease, text-decoration 0.15s ease; }
   .checklist-item.checked label { color: var(--text-muted); text-decoration: line-through; }
 
   .remove-item-btn { background: transparent; border: none; color: var(--text-faint); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; transition: color 0.15s ease; }
-  .remove-item-btn:hover { color: var(--danger); }
+  .remove-item-btn:hover { color: var(--danger-text); }
 
   .add-item-row { display: flex; gap: 10px; margin-bottom: 22px; }
   .add-item-row input {
     flex: 1; padding: 11px 13px; background: rgba(163, 193, 231, 0.06); border: 1px solid var(--border);
     border-radius: var(--radius-sm); color: var(--text); font-size: 14px; font-family: var(--font-body); outline: none;
   }
-  .add-item-row input:focus { border-color: var(--accent); }
+  .add-item-row input:focus { border-color: var(--accent-text); }
 
   .actions-row { display: flex; justify-content: flex-end; }
 </style>
@@ -82,7 +83,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=5";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=6";
 
     document.getElementById('navRoot').innerHTML = renderNav('checklist');
 

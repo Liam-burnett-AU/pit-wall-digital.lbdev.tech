@@ -6,6 +6,7 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 
 ## Features
 
+- **Light/dark theme** — follows your system setting by default; toggle it from the sidebar (or the login page) and it's remembered from then on.
 - **Team accounts** — sign up/log in with Firebase Auth; team number and name are looked up live from [FTCScout](https://ftcscout.org) as you type.
 - **Dashboard** — quick links and a snapshot of your robot profile.
 - **Robot profile** — log your drivetrain, game piece mechanism, and autonomous routine; this feeds the AI chat and event analysis.

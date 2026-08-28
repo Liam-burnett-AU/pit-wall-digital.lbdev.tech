@@ -4,7 +4,7 @@
 // app-specific glue: nav, toasts, markdown, and the third-party API calls.
 
 // Bump this on every deployed change — shown on the Settings page.
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.2.0";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
@@ -313,19 +313,41 @@ export function renderNav(activeKey) {
       <nav class="sidebar-nav" aria-label="Main">${items}</nav>
       <div class="sidebar-foot">
         <span class="sidebar-team-chip" id="teamChip">Loading…</span>
+        <button class="theme-toggle" id="themeToggle" aria-label="Switch to light theme">
+          <span class="icon-sun" aria-hidden="true">☀️</span>
+          <span class="icon-moon" aria-hidden="true">🌙</span>
+          <span class="theme-toggle-label">Theme</span>
+        </button>
         <button class="sidebar-signout" id="sidebarSignout">Sign out</button>
       </div>
     </aside>
   `;
 }
 
-// Wires the hamburger/scrim toggle and the sign-out button. `signOutFn`
-// is passed in so this module doesn't need its own Firebase Auth import.
+// ===== Theme (light/dark) =====
+
+const THEME_STORAGE_KEY = 'pitwall-theme';
+
+export function getTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
+export function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem(THEME_STORAGE_KEY, theme); } catch (err) { /* private browsing etc — theme just won't persist */ }
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.setAttribute('aria-label', theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+}
+
+// Wires the hamburger/scrim toggle, the theme toggle, and the sign-out
+// button. `signOutFn` is passed in so this module doesn't need its own
+// Firebase Auth import.
 export function wireNav(auth, signOutFn) {
   const sidebar = document.getElementById('appSidebar');
   const scrim = document.getElementById('sidebarScrim');
   const hamburger = document.getElementById('navHamburger');
   const signoutBtn = document.getElementById('sidebarSignout');
+  const themeToggle = document.getElementById('themeToggle');
 
   function setOpen(open) {
     sidebar?.classList.toggle('open', open);
@@ -336,6 +358,9 @@ export function wireNav(auth, signOutFn) {
   hamburger?.addEventListener('click', () => setOpen(!sidebar?.classList.contains('open')));
   scrim?.addEventListener('click', () => setOpen(false));
   sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
+
+  setTheme(getTheme()); // sync the toggle's aria-label to whatever the early inline script already applied
+  themeToggle?.addEventListener('click', () => setTheme(getTheme() === 'light' ? 'dark' : 'light'));
 
   signoutBtn?.addEventListener('click', async () => {
     try {
