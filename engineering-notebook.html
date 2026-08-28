@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Engineering Notebook</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   .form-card { margin-bottom: 32px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -39,11 +39,11 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div id="modalOverlay" class="modal-overlay hidden">
     <div class="modal-panel">
-      <button type="button" class="modal-close" id="modalCloseBtn">✕</button>
+      <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">✕</button>
       <div id="modalBody"></div>
     </div>
   </div>
@@ -52,7 +52,7 @@
     <div id="navRoot"></div>
 
     <div class="app-main">
-      <main class="page">
+      <main class="page" id="mainContent" tabindex="-1">
         <div class="state-block" id="loadingState">
           <div style="max-width:420px; margin:0 auto; text-align:left;">
             <div class="skeleton skeleton-block w-40"></div>
@@ -165,8 +165,8 @@
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
-      callGroq, uploadToCloudinary, VISION_MODEL
-    } from "./assets/app.js?v=3";
+      callGroq, uploadToCloudinary, VISION_MODEL, openModal, closeModal
+    } from "./assets/app.js?v=4";
 
     document.getElementById('navRoot').innerHTML = renderNav('notebook');
 
@@ -314,6 +314,9 @@
           const e = docSnap.data();
           const card = document.createElement('div');
           card.className = 'entry-card clickable';
+          card.setAttribute('role', 'button');
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('aria-label', `${e.title}, ${e.date} — open full entry`);
           card.innerHTML = `
             <div class="entry-head">
               <div>
@@ -333,7 +336,13 @@
           `;
           card.addEventListener('click', (ev) => {
             if (ev.target.closest('[data-action="delete"]')) return;
-            openEntryModal(docSnap.id, e);
+            openEntryModal(docSnap.id, e, card);
+          });
+          card.addEventListener('keydown', (ev) => {
+            if ((ev.key === 'Enter' || ev.key === ' ') && ev.target === card) {
+              ev.preventDefault();
+              openEntryModal(docSnap.id, e, card);
+            }
           });
           card.querySelector('[data-action="delete"]').addEventListener('click', (ev) => {
             ev.stopPropagation();
@@ -367,18 +376,13 @@
 
     // ==================== SHARED MODAL ====================
 
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.add('hidden');
+    document.getElementById('modalCloseBtn').addEventListener('click', () => {
+      closeModal('modalOverlay');
       currentModalEntryId = null;
       currentModalPhotoId = null;
-    }
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    document.getElementById('modalOverlay').addEventListener('click', (e) => {
-      if (e.target.id === 'modalOverlay') closeModal();
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-    function openEntryModal(entryId, e) {
+    function openEntryModal(entryId, e, triggerEl) {
       currentModalEntryId = entryId;
       currentModalPhotoId = null;
 
@@ -387,16 +391,16 @@
         : `<div class="ai-block loading"><span class="ai-label"><span class="ai-dot"></span>AI Feedback</span><div class="ai-body">Still generating feedback for this entry...</div></div>`;
 
       document.getElementById('modalBody').innerHTML = `
-        <div class="modal-title">${escapeHtml(e.title)}</div>
+        <h2 class="modal-title">${escapeHtml(e.title)}</h2>
         <div class="modal-subtitle">${escapeHtml(e.date)}</div>
         <div class="modal-section"><span class="info-label">What we did</span><div class="body">${escapeHtml(e.task)}</div></div>
         ${e.reflection ? `<div class="modal-section"><span class="info-label">Reflection</span><div class="body">${escapeHtml(e.reflection)}</div></div>` : ''}
         ${feedbackBlock}
       `;
-      document.getElementById('modalOverlay').classList.remove('hidden');
+      openModal('modalOverlay', triggerEl);
     }
 
-    function openPhotoModal(photoId, p) {
+    function openPhotoModal(photoId, p, triggerEl) {
       currentModalPhotoId = photoId;
       currentModalEntryId = null;
 
@@ -407,11 +411,11 @@
            <button type="button" class="btn btn-primary" id="modalGetFeedbackBtn" style="margin-top:12px;">Get AI Feedback</button>`;
 
       document.getElementById('modalBody').innerHTML = `
-        <img class="modal-img" src="${p.url}" alt="${escapeHtml(p.filename)}">
-        <div class="modal-title">${escapeHtml(p.filename)}</div>
+        <img class="modal-img" src="${p.url}" alt="Notebook page photo: ${escapeHtml(p.filename)}">
+        <h2 class="modal-title">${escapeHtml(p.filename)}</h2>
         ${feedbackBlock}
       `;
-      document.getElementById('modalOverlay').classList.remove('hidden');
+      openModal('modalOverlay', triggerEl);
 
       if (!hasFeedback) {
         document.getElementById('modalGetFeedbackBtn')?.addEventListener('click', () => getPhotoFeedback(photoId, p));
@@ -489,7 +493,7 @@
           const card = document.createElement('div');
           card.className = 'photo-card';
           card.innerHTML = `
-            <button type="button" class="thumb-btn" data-action="open"><img src="${p.url}" alt="${escapeHtml(p.filename)}"></button>
+            <button type="button" class="thumb-btn" data-action="open" aria-label="Open ${escapeHtml(p.filename)}"><img src="${p.url}" alt="Notebook page photo: ${escapeHtml(p.filename)}"></button>
             <div class="photo-card-body">
               <div class="mono" style="font-size:11px; color:var(--text-muted); word-break:break-all;">${escapeHtml(p.filename)}${p.aiFeedback ? ' · feedback ready' : ''}</div>
               <div class="photo-actions">
@@ -498,7 +502,7 @@
               </div>
             </div>
           `;
-          card.querySelectorAll('[data-action="open"]').forEach(el => el.addEventListener('click', () => openPhotoModal(docSnap.id, p)));
+          card.querySelectorAll('[data-action="open"]').forEach(el => el.addEventListener('click', () => openPhotoModal(docSnap.id, p, el)));
           card.querySelector('[data-action="delete"]').addEventListener('click', () => deletePhoto(docSnap.id));
           grid.appendChild(card);
         });

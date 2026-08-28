@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Events</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   .event-card { margin-bottom: 14px; }
   .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
@@ -29,11 +29,11 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div id="modalOverlay" class="modal-overlay hidden">
     <div class="modal-panel">
-      <button type="button" class="modal-close" id="modalCloseBtn">✕</button>
+      <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">✕</button>
       <div id="modalBody"></div>
     </div>
   </div>
@@ -42,7 +42,7 @@
     <div id="navRoot"></div>
 
     <div class="app-main">
-      <main class="page">
+      <main class="page" id="mainContent" tabindex="-1">
         <div class="state-block" id="loadingState">
           <div style="max-width:420px; margin:0 auto; text-align:left;">
             <div class="skeleton skeleton-block w-40"></div>
@@ -64,10 +64,10 @@
             </div>
           </div>
 
-          <div class="section-label">Upcoming</div>
+          <h2 class="section-label">Upcoming</h2>
           <div id="upcomingList"></div>
 
-          <div class="section-label">Past</div>
+          <h2 class="section-label">Past</h2>
 
           <div id="pastEmptyState" class="entries-empty hidden">No past events yet — once you've competed somewhere, it'll show up here.</div>
 
@@ -114,8 +114,9 @@
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
-      ftcEventsFetch, fetchTeamEventsAcrossSeasons, ftcScoutFetch, renderKeyValueList, callGroq
-    } from "./assets/app.js?v=3";
+      ftcEventsFetch, fetchTeamEventsAcrossSeasons, ftcScoutFetch, renderKeyValueList, callGroq,
+      openModal, closeModal
+    } from "./assets/app.js?v=4";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
 
@@ -452,7 +453,13 @@
       container.innerHTML = `<div class="list-table">${matches.map((m, i) => matchRowHtml(m, i)).join('')}</div>`;
       container.querySelectorAll('[data-match-index]').forEach(row => {
         const idx = parseInt(row.dataset.matchIndex, 10);
-        row.addEventListener('click', () => openMatchModal(event, matches[idx]));
+        row.addEventListener('click', () => openMatchModal(event, matches[idx], row));
+        row.addEventListener('keydown', (e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
+            e.preventDefault();
+            openMatchModal(event, matches[idx], row);
+          }
+        });
       });
     }
 
@@ -468,9 +475,9 @@
       const ourScore = ourColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
       const oppScore = ourColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
 
-      if (ourScore > oppScore) return '<span class="badge success" style="margin-left:8px;">Win</span>';
-      if (ourScore < oppScore) return '<span class="badge danger" style="margin-left:8px;">Loss</span>';
-      return '<span class="badge" style="margin-left:8px;">Tie</span>';
+      if (ourScore > oppScore) return '<span class="badge success badge-inline">Win</span>';
+      if (ourScore < oppScore) return '<span class="badge danger badge-inline">Loss</span>';
+      return '<span class="badge badge-inline">Tie</span>';
     }
 
     function matchRowHtml(m, idx) {
@@ -480,9 +487,10 @@
       const played = m.scoreRedFinal != null || m.scoreBlueFinal != null;
       const scoreStr = played ? `${m.scoreRedFinal ?? '—'} – ${m.scoreBlueFinal ?? '—'}` : 'Not played';
       const teamsStr = `R: ${red.map(t => '#' + t.teamNumber).join(', ') || '—'} · B: ${blue.map(t => '#' + t.teamNumber).join(', ') || '—'}`;
+      const label = `Match ${m.matchNumber ?? '?'}, ${m.tournamentLevel || 'qual'}, ${teamsStr}, ${scoreStr}`;
 
       return `
-        <div class="list-row" data-match-index="${idx}">
+        <div class="list-row" data-match-index="${idx}" role="button" tabindex="0" aria-label="${escapeHtml(label)}">
           <div>
             <div class="primary">Match ${m.matchNumber ?? '?'} <span class="faint" style="font-weight:400;">(${escapeHtml(m.tournamentLevel || 'qual')})</span>${ourResultBadge(m)}</div>
             <div class="secondary">${escapeHtml(teamsStr)}</div>
@@ -501,15 +509,22 @@
       container.innerHTML = `<div class="list-table">${teams.map((t, i) => teamRowHtml(t, i)).join('')}</div>`;
       container.querySelectorAll('[data-team-index]').forEach(row => {
         const idx = parseInt(row.dataset.teamIndex, 10);
-        row.addEventListener('click', () => openTeamModal(event, teams[idx]));
+        row.addEventListener('click', () => openTeamModal(event, teams[idx], row));
+        row.addEventListener('keydown', (e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
+            e.preventDefault();
+            openTeamModal(event, teams[idx], row);
+          }
+        });
       });
     }
 
     function teamRowHtml(t, idx) {
       const rankStr = t._ranking ? `Rank ${t._ranking.rank}` : '';
       const location = [t.city, t.stateProv, t.country].filter(Boolean).join(', ');
+      const label = `Team ${t.teamNumber}, ${t.nameShort || t.nameFull || 'Unnamed team'}, ${location || 'location unknown'}${rankStr ? ', ' + rankStr : ''}`;
       return `
-        <div class="list-row" data-team-index="${idx}">
+        <div class="list-row" data-team-index="${idx}" role="button" tabindex="0" aria-label="${escapeHtml(label)}">
           <div>
             <div class="primary">#${escapeHtml(t.teamNumber)} ${escapeHtml(t.nameShort || t.nameFull || 'Unnamed team')}</div>
             <div class="secondary">${escapeHtml(location || 'Location unknown')}</div>
@@ -521,16 +536,9 @@
 
     // ==================== MODALS ====================
 
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.add('hidden');
-    }
-    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-    document.getElementById('modalOverlay').addEventListener('click', (e) => {
-      if (e.target.id === 'modalOverlay') closeModal();
-    });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('modalCloseBtn').addEventListener('click', () => closeModal('modalOverlay'));
 
-    async function openMatchModal(event, match) {
+    async function openMatchModal(event, match, triggerEl) {
       const myModalToken = ++matchModalToken;
       const teams = match.teams || [];
       const red = teams.filter(t => (t.station || '').toLowerCase().includes('red'));
@@ -538,7 +546,7 @@
       const played = match.scoreRedFinal != null || match.scoreBlueFinal != null;
 
       document.getElementById('modalBody').innerHTML = `
-        <div class="modal-title">Match ${match.matchNumber ?? '?'} — ${escapeHtml(match.tournamentLevel || 'Qualification')}${ourResultBadge(match)}</div>
+        <h2 class="modal-title">Match ${match.matchNumber ?? '?'} — ${escapeHtml(match.tournamentLevel || 'Qualification')}${ourResultBadge(match)}</h2>
         <div class="modal-subtitle">${escapeHtml(event.name)} · ${formatDateRange(event)}</div>
 
         <div class="modal-section">
@@ -560,7 +568,7 @@
         <div class="modal-subhead">Team Season Stats (FTCScout API)</div>
         <div id="modalScoutStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
       `;
-      document.getElementById('modalOverlay').classList.remove('hidden');
+      openModal('modalOverlay', triggerEl);
 
       loadMatchFeedback(event, match, myModalToken);
 
@@ -715,9 +723,9 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
       });
     }
 
-    async function openTeamModal(event, team) {
+    async function openTeamModal(event, team, triggerEl) {
       document.getElementById('modalBody').innerHTML = `
-        <div class="modal-title">#${escapeHtml(team.teamNumber)} ${escapeHtml(team.nameShort || team.nameFull || 'Unnamed team')}</div>
+        <h2 class="modal-title">#${escapeHtml(team.teamNumber)} ${escapeHtml(team.nameShort || team.nameFull || 'Unnamed team')}</h2>
         <div class="modal-subtitle">${escapeHtml(event.name)}</div>
 
         <div class="modal-subhead">Event Roster Info (FTC Events API)</div>
@@ -734,7 +742,7 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
         <div class="modal-subhead">Season Quick Stats (FTCScout API)</div>
         <div id="modalScoutQuickStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
       `;
-      document.getElementById('modalOverlay').classList.remove('hidden');
+      openModal('modalOverlay', triggerEl);
 
       const profileEl = document.getElementById('modalScoutProfile');
       const statsEl = document.getElementById('modalScoutQuickStats');

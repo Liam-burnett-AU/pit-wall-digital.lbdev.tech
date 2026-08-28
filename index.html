@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Team Access</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   body { overflow-x: hidden; }
   .split {
@@ -146,7 +146,7 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div class="split">
     <div class="hero">
@@ -255,7 +255,7 @@
       signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, wireTeamLookup } from "./assets/app.js?v=3";
+    import { firebaseConfig, toast, wireTeamLookup } from "./assets/app.js?v=4";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);

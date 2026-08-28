@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Pit Checklist</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   .progress-ring-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .progress-text { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); text-align: right; }
@@ -32,13 +32,13 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div class="app-shell">
     <div id="navRoot"></div>
 
     <div class="app-main">
-      <main class="page narrow">
+      <main class="page narrow" id="mainContent" tabindex="-1">
         <div class="state-block" id="loadingState">
           <div style="max-width:420px; margin:0 auto; text-align:left;">
             <div class="skeleton skeleton-block w-40"></div>
@@ -64,7 +64,7 @@
           </div>
 
           <div class="add-item-row">
-            <input type="text" id="newItemInput" placeholder="Add a checklist item...">
+            <input type="text" id="newItemInput" aria-label="New checklist item" placeholder="Add a checklist item...">
             <button type="button" class="btn btn-primary" id="addItemBtn">Add</button>
           </div>
 
@@ -82,7 +82,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=3";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip } from "./assets/app.js?v=4";
 
     document.getElementById('navRoot').innerHTML = renderNav('checklist');
 
@@ -157,7 +157,7 @@
         row.innerHTML = `
           <input type="checkbox" id="chk_${item.id}" ${item.checked ? 'checked' : ''}>
           <label for="chk_${item.id}">${escapeHtml(item.text)}</label>
-          <button type="button" class="remove-item-btn" title="Remove item">✕</button>
+          <button type="button" class="remove-item-btn" title="Remove item" aria-label="Remove &quot;${escapeHtml(item.text)}&quot;">✕</button>
         `;
         row.querySelector('input').addEventListener('change', (e) => toggleItem(item.id, e.target.checked));
         row.querySelector('.remove-item-btn').addEventListener('click', () => removeItem(item.id));

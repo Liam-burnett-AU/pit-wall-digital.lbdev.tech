@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — AI Chat</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   html, body { height: 100%; overflow: hidden; }
   .app-shell { height: 100vh; height: 100dvh; }
@@ -121,12 +121,12 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div class="app-shell">
     <div id="navRoot"></div>
 
-    <div class="app-main chat-shell">
+    <main class="app-main chat-shell" id="mainContent" tabindex="-1">
       <div class="chat-header">
         <h1>Pit Wall // AI Chat</h1>
         <div class="flex items-center gap-16">
@@ -153,11 +153,11 @@
 
       <div class="input-bar">
         <div class="input-inner">
-          <textarea id="chatInput" placeholder="Ask about strategy, your robot, or the competition..." rows="1"></textarea>
+          <textarea id="chatInput" aria-label="Message" placeholder="Ask about strategy, your robot, or the competition..." rows="1"></textarea>
           <button type="button" class="btn btn-primary send-btn" id="sendBtn" aria-label="Send message" title="Send">➤</button>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <!-- Markdown + maths rendering libraries -->
@@ -170,7 +170,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js?v=3";
+    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown } from "./assets/app.js?v=4";
 
     document.getElementById('navRoot').innerHTML = renderNav('chat');
 

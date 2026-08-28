@@ -30,10 +30,15 @@ export const FTC_EVENTS_SEASON = "2026";
 export const CLOUDINARY_CLOUD_NAME = "dmht3gpl";
 export const CLOUDINARY_UPLOAD_PRESET = "LB Dev";
 
+// Escapes for both text-node and attribute-value contexts (quotes included)
+// since output from this is used in both places all over the app.
 export function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str == null ? '' : String(str);
-  return div.innerHTML;
+  return (str == null ? '' : String(str))
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Renders trusted-ish Markdown (AI output) to sanitised HTML. Falls back to
@@ -96,6 +101,7 @@ export function toast(message, type = 'success', duration = 3500) {
   if (!container) return;
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
+  el.setAttribute('role', 'status');
   el.textContent = message;
   container.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
@@ -285,22 +291,23 @@ const NAV_ITEMS = [
 
 export function renderNav(activeKey) {
   const items = NAV_ITEMS.map(i => `
-    <a href="${i.href}" class="${i.key === activeKey ? 'active' : ''}">
-      <span class="icon">${i.icon}</span>${i.label}
+    <a href="${i.href}" class="${i.key === activeKey ? 'active' : ''}"${i.key === activeKey ? ' aria-current="page"' : ''}>
+      <span class="icon" aria-hidden="true">${i.icon}</span>${i.label}
     </a>`).join('');
 
   return `
+    <a href="#mainContent" class="skip-link">Skip to main content</a>
     <div class="mobile-topbar">
-      <div class="brand-mini"><span class="mark">PW</span> Pit Wall</div>
-      <button class="hamburger-btn" id="navHamburger" aria-label="Open menu">☰</button>
+      <div class="brand-mini"><span class="mark" aria-hidden="true">PW</span> Pit Wall</div>
+      <button class="hamburger-btn" id="navHamburger" aria-label="Open menu" aria-expanded="false" aria-controls="appSidebar">☰</button>
     </div>
     <div class="sidebar-scrim" id="sidebarScrim"></div>
     <aside class="sidebar" id="appSidebar">
       <div class="sidebar-brand">
-        <span class="mark">PW</span>
+        <span class="mark" aria-hidden="true">PW</span>
         <span class="name">Pit Wall<small>FTC Team Hub</small></span>
       </div>
-      <nav class="sidebar-nav">${items}</nav>
+      <nav class="sidebar-nav" aria-label="Main">${items}</nav>
       <div class="sidebar-foot">
         <span class="sidebar-team-chip" id="teamChip">Loading…</span>
         <button class="sidebar-signout" id="sidebarSignout">Sign out</button>
@@ -317,17 +324,15 @@ export function wireNav(auth, signOutFn) {
   const hamburger = document.getElementById('navHamburger');
   const signoutBtn = document.getElementById('sidebarSignout');
 
-  function closeNav() {
-    sidebar?.classList.remove('open');
-    scrim?.classList.remove('open');
+  function setOpen(open) {
+    sidebar?.classList.toggle('open', open);
+    scrim?.classList.toggle('open', open);
+    hamburger?.setAttribute('aria-expanded', String(open));
   }
 
-  hamburger?.addEventListener('click', () => {
-    sidebar?.classList.toggle('open');
-    scrim?.classList.toggle('open');
-  });
-  scrim?.addEventListener('click', closeNav);
-  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeNav));
+  hamburger?.addEventListener('click', () => setOpen(!sidebar?.classList.contains('open')));
+  scrim?.addEventListener('click', () => setOpen(false));
+  sidebar?.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setOpen(false)));
 
   signoutBtn?.addEventListener('click', async () => {
     try {
@@ -343,4 +348,77 @@ export function wireNav(auth, signOutFn) {
 export function setTeamChip(team) {
   const el = document.getElementById('teamChip');
   if (el) el.textContent = `#${team.teamNumber || '—'} ${team.competition || 'FTC'}`;
+}
+
+// ===== Accessible modal open/close =====
+// Shared by every page with a #modalOverlay/.modal-panel popup. Handles
+// what each page used to duplicate (Escape to close, click outside to
+// close) plus what they didn't have: marking the dialog up for screen
+// readers, trapping Tab inside it while open, and returning keyboard
+// focus to whatever opened it once it closes.
+
+const modalStates = {};
+
+export function openModal(overlayId, triggerEl) {
+  const overlay = document.getElementById(overlayId);
+  const panel = overlay?.querySelector('.modal-panel');
+  if (!overlay || !panel) return;
+
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  panel.setAttribute('tabindex', '-1');
+  overlay.classList.remove('hidden');
+
+  const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  const focusable = () => Array.from(panel.querySelectorAll(focusableSelector)).filter(el => el.offsetParent !== null);
+
+  (focusable()[0] || panel).focus({ preventScroll: true });
+
+  const keydownHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeModal(overlayId);
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const items = focusable();
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener('keydown', keydownHandler);
+
+  const clickOutsideHandler = (e) => {
+    if (e.target === overlay) closeModal(overlayId);
+  };
+  overlay.addEventListener('click', clickOutsideHandler);
+
+  modalStates[overlayId] = {
+    triggerEl: triggerEl || document.activeElement,
+    keydownHandler,
+    clickOutsideHandler
+  };
+}
+
+export function closeModal(overlayId) {
+  const overlay = document.getElementById(overlayId);
+  const state = modalStates[overlayId];
+  if (!overlay) return;
+
+  overlay.classList.add('hidden');
+
+  if (state) {
+    document.removeEventListener('keydown', state.keydownHandler);
+    overlay.removeEventListener('click', state.clickOutsideHandler);
+    if (state.triggerEl && typeof state.triggerEl.focus === 'function') {
+      state.triggerEl.focus({ preventScroll: true });
+    }
+    delete modalStates[overlayId];
+  }
 }

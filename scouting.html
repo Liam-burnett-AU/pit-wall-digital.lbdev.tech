@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pit Wall — Scouting</title>
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=4">
 <style>
   .form-card { margin-bottom: 30px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -25,13 +25,13 @@
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
 
   <div class="app-shell">
     <div id="navRoot"></div>
 
     <div class="app-main">
-      <main class="page">
+      <main class="page" id="mainContent" tabindex="-1">
         <div class="state-block" id="loadingState">
           <div style="max-width:420px; margin:0 auto; text-align:left;">
             <div class="skeleton skeleton-block w-40"></div>
@@ -140,7 +140,7 @@
     import {
       getFirestore, doc, getDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=3";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup } from "./assets/app.js?v=4";
 
     document.getElementById('navRoot').innerHTML = renderNav('scouting');
 
