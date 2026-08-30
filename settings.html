@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Settings</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   h1.page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 30px; }
   .settings-section { margin-bottom: 20px; }
@@ -74,7 +74,7 @@
             <div class="status-msg" id="passwordStatus"></div>
           </div>
 
-          <div class="settings-section card">
+          <div class="settings-section card" id="teamInfoCard">
             <h2>Team Info</h2>
             <p class="section-desc">Update your team's details. This is what the AI chat uses as context.</p>
 
@@ -164,7 +164,7 @@
       reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut, sendEmailVerification
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION, resolveTeamId } from "./assets/app.js?v=8";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION, resolveTeamId, getTeamMembers, countOwners, warnOnUnsavedChanges } from "./assets/app.js?v=9";
 
     document.getElementById('versionLine').textContent = `Pit Wall v${APP_VERSION}`;
 
@@ -177,11 +177,15 @@
 
     let currentUser = null;
     let currentTeamId = null;
+    let teamFormDirty = false;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
     const errorMessage = document.getElementById('errorMessage');
     const settingsContent = document.getElementById('settingsContent');
+
+    warnOnUnsavedChanges(() => teamFormDirty);
+    document.getElementById('teamInfoCard').addEventListener('input', () => { teamFormDirty = true; });
 
     function showError(msg) {
       loadingState.classList.add('hidden');
@@ -219,6 +223,7 @@
         document.getElementById('teamName').value = team.teamName || '';
         document.getElementById('teamNumber').value = team.teamNumber || '';
         document.getElementById('teamCompetition').value = team.competition || 'FTC';
+        teamFormDirty = false;
 
         loadingState.classList.add('hidden');
         settingsContent.classList.remove('hidden');
@@ -415,6 +420,7 @@
 
         setTeamChip({ teamNumber, competition });
         setStatus('teamStatus', 'Team info saved.', 'success');
+        teamFormDirty = false;
       } catch (err) {
         console.error(err);
         setStatus('teamStatus', "Couldn't save — check your connection and try again.", 'error');
@@ -447,6 +453,13 @@
       }
 
       try {
+        const members = await getTeamMembers(db, currentTeamId);
+        const me = members.find(m => m.uid === currentUser.uid);
+        if (me && me.role === 'Owner' && countOwners(members) <= 1) {
+          setStatus('deleteAccountStatus', "You're the only Owner on this team — go to Roster and make someone else Owner first, then you can delete your account.", 'error');
+          return;
+        }
+
         await reauthenticate(password);
         await deleteDoc(doc(db, 'members', currentUser.uid));
         await deleteUser(currentUser);

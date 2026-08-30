@@ -6,7 +6,7 @@
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — AI Chat</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   html, body { height: 100%; overflow: hidden; }
   .app-shell { height: 100vh; height: 100dvh; }
@@ -171,7 +171,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown, resolveTeamId } from "./assets/app.js?v=8";
+    import { firebaseConfig, renderNav, wireNav, callGroq, renderMarkdown, resolveTeamId } from "./assets/app.js?v=9";
 
     document.getElementById('navRoot').innerHTML = renderNav('chat');
 

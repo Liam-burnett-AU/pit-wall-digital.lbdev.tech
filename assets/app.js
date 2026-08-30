@@ -2,14 +2,18 @@
 // Firebase SDK calls mostly stay in each page (so pages only import the
 // pieces they actually use) — this module holds the config value plus the
 // app-specific glue: nav, toasts, markdown, and the third-party API calls.
-// The one exception is resolveTeamId() below, which every page needs
-// identically, so it imports Firestore directly rather than have every
-// caller pass their own doc/getDoc/setDoc in.
+// The exceptions are resolveTeamId() and getTeamMembers() below, which need
+// to behave identically everywhere they're used (roster management and the
+// "every team needs an owner" rule are both enforced from more than one
+// page), so they import Firestore directly rather than have every caller
+// pass their own doc/getDoc/setDoc/query in.
 
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  doc, getDoc, setDoc, collection, query, where, getDocs
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Bump this on every deployed change — shown on the Settings page.
-export const APP_VERSION = "1.4.0";
+export const APP_VERSION = "1.5.0";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
@@ -408,6 +412,18 @@ export async function resolveTeamId(db, user) {
   return user.uid;
 }
 
+// All members/{uid} docs for a team, as {uid, ...data}. Used by Roster and
+// by Settings' "Delete Account" to enforce that a team always keeps at
+// least one Owner.
+export async function getTeamMembers(db, teamId) {
+  const snap = await getDocs(query(collection(db, 'members'), where('teamId', '==', teamId)));
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+export function countOwners(members) {
+  return members.filter(m => m.role === 'Owner').length;
+}
+
 // Short, human-typeable code for the "join a team" flow — excludes
 // characters that are easy to mix up (0/O, 1/I).
 export function generateJoinCode() {
@@ -415,6 +431,19 @@ export function generateJoinCode() {
   let code = '';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
+}
+
+// ===== Unsaved-changes warning =====
+// Prompts the browser's native "leave site?" confirmation (covers the back
+// button, closing the tab, refreshing, and clicking away to another page —
+// every page here is a real navigation, not a SPA route) whenever isDirty()
+// is true. Call once per page with a function reporting current dirty state.
+export function warnOnUnsavedChanges(isDirty) {
+  window.addEventListener('beforeunload', (e) => {
+    if (!isDirty()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 }
 
 // ===== Accessible modal open/close =====

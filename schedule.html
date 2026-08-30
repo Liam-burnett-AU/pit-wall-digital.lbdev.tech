@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Schedule</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   .event-select-card { margin-bottom: 24px; }
   .event-select-card .level-toggle { margin-top: 14px; }
@@ -78,7 +78,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, ftcEventsFetch, FTC_EVENTS_SEASON, resolveTeamId } from "./assets/app.js?v=8";
+    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, ftcEventsFetch, FTC_EVENTS_SEASON, resolveTeamId } from "./assets/app.js?v=9";
 
     document.getElementById('navRoot').innerHTML = renderNav('schedule');
 

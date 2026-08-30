@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Robot Profile</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   form { display: flex; flex-direction: column; gap: 22px; }
   .actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
@@ -83,7 +83,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=8";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, resolveTeamId, warnOnUnsavedChanges } from "./assets/app.js?v=9";
 
     document.getElementById('navRoot').innerHTML = renderNav('robot');
 
@@ -93,14 +93,19 @@
     wireNav(auth, signOut);
 
     let currentTeamId = null;
+    let formDirty = false;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
     const errorMessage = document.getElementById('errorMessage');
     const formContent = document.getElementById('formContent');
+    const robotForm = document.getElementById('robotForm');
     const saveBtn = document.getElementById('saveBtn');
     const saveStatus = document.getElementById('saveStatus');
     const lastUpdated = document.getElementById('lastUpdated');
+
+    warnOnUnsavedChanges(() => formDirty);
+    robotForm.addEventListener('input', () => { formDirty = true; });
 
     function showError(msg) {
       loadingState.classList.add('hidden');
@@ -134,6 +139,7 @@
           if (robot.updatedAt) showLastUpdated(robot.updatedAt);
         }
 
+        formDirty = false;
         loadingState.classList.add('hidden');
         formContent.classList.remove('hidden');
 
@@ -168,6 +174,7 @@
         saveStatus.className = 'status-msg success';
         toast('Robot profile saved.', 'success');
         showLastUpdated(updatedAt);
+        formDirty = false;
 
       } catch (err) {
         console.error('Save error:', err);

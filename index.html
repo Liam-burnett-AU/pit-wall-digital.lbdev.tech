@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Team Access</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   body { overflow-x: hidden; }
   .split {
@@ -220,7 +220,7 @@
         <!-- SIGNUP -->
         <div id="signupForm" class="hidden">
           <h1 class="form-title">Create team account</h1>
-          <p class="form-subtitle">Set up access for your robotics team.</p>
+          <p class="form-subtitle">Set up access for your robotics team. Already have a teammate signed up? Use "Join Team" instead — only one Pit Wall team can exist per team number.</p>
 
           <div class="field">
             <label for="signupCompetition">Competition</label>
@@ -299,11 +299,13 @@
       sendEmailVerification
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, wireTeamLookup, getTheme, setTheme, generateJoinCode } from "./assets/app.js?v=8";
+    import { firebaseConfig, toast, wireTeamLookup, getTheme, setTheme, generateJoinCode } from "./assets/app.js?v=9";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    const SUPPORT_EMAIL = 'liamburnett40@gmail.com';
 
     setTheme(getTheme()); // sync the toggle's aria-label to whatever the early inline script already applied
     document.getElementById('themeToggle').addEventListener('click', () => setTheme(getTheme() === 'light' ? 'dark' : 'light'));
@@ -413,8 +415,21 @@
       }
 
       btn.disabled = true;
-      btn.textContent = 'Creating account...';
+      btn.textContent = 'Checking team number...';
       try {
+        // Only one Pit Wall team per real FTC team number — check before
+        // creating an Auth account so a typo/duplicate doesn't leave an
+        // orphaned unverified account behind.
+        const dupQuery = query(collection(db, 'teams'), where('teamNumber', '==', teamNumber));
+        const dupSnap = await getDocs(dupQuery);
+        if (!dupSnap.empty) {
+          showMsg(msg, `A Pit Wall team already exists for team #${teamNumber} — ask a teammate for the join code and use "Join Team" instead. If no one on your team has a Pit Wall account yet, contact support at ${SUPPORT_EMAIL}.`, 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Account';
+          return;
+        }
+
+        btn.textContent = 'Creating account...';
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, 'teams', cred.user.uid), {
           teamName,
@@ -457,7 +472,7 @@
         const teamsQuery = query(collection(db, 'teams'), where('joinCode', '==', code));
         const matches = await getDocs(teamsQuery);
         if (matches.empty) {
-          showMsg(msg, "No team found with that code — check it and try again.", 'error');
+          showMsg(msg, `No team found with that code — check it and try again. If no one on your team has a Pit Wall account yet, contact support at ${SUPPORT_EMAIL}.`, 'error');
           btn.disabled = false;
           btn.textContent = 'Join Team';
           return;

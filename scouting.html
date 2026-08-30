@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Scouting</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
   .form-card { margin-bottom: 30px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -55,7 +55,7 @@
             </div>
           </div>
 
-          <div class="form-card card">
+          <div class="form-card card" id="entryFormCard">
             <h2 id="formTitle">New Scouting Entry</h2>
 
             <div class="modal-subhead">Team</div>
@@ -145,7 +145,7 @@
     import {
       getFirestore, doc, getDoc, collection, addDoc, deleteDoc, getDocs, query, orderBy, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, resolveTeamId } from "./assets/app.js?v=8";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, resolveTeamId, warnOnUnsavedChanges } from "./assets/app.js?v=9";
 
     document.getElementById('navRoot').innerHTML = renderNav('scouting');
 
@@ -157,11 +157,15 @@
     let currentTeamId = null;
     let editingEntryId = null;
     let currentEntries = [];
+    let formDirty = false;
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
     const errorMessage = document.getElementById('errorMessage');
     const pageContent = document.getElementById('pageContent');
+
+    warnOnUnsavedChanges(() => formDirty);
+    document.getElementById('entryFormCard').addEventListener('input', () => { formDirty = true; });
 
     function showError(msg) {
       loadingState.classList.add('hidden');
@@ -268,6 +272,7 @@
       });
       document.getElementById('driverRating').value = '';
       document.getElementById('lookupStatus').textContent = '';
+      formDirty = false;
       editingEntryId = null;
       document.getElementById('formTitle').innerHTML = 'New Scouting Entry';
       document.getElementById('saveEntryBtn').textContent = 'Save Entry';

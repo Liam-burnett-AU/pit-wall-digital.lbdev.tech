@@ -5,21 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Team Roster</title>
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <style>
-  .code-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
-  .code-value { font-family: var(--font-mono); font-size: 30px; font-weight: 700; letter-spacing: 5px; color: var(--accent-text); }
-  .code-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .code-card {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    margin-bottom: 24px; background: var(--accent-soft); border-color: var(--accent-border);
+  }
+  .code-card-label { display: flex; align-items: center; gap: 12px; }
+  .code-icon {
+    width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+    background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+  }
+  .code-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 4px; }
+  .code-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; letter-spacing: 5px; color: var(--accent-text); }
   .code-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-  .member-role { min-width: 140px; }
+  .owner-note {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.5;
+  }
+  .owner-note .icon { flex-shrink: 0; font-size: 15px; margin-top: -1px; }
+
+  .member-card {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 16px 18px; margin-bottom: 10px; transition: border-color 0.15s ease;
+  }
+  .member-card:hover { border-color: var(--border-strong); }
+  .member-card.is-you { border-color: var(--accent-border); }
+
+  .member-avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 800; font-size: 17px;
+  }
+  .member-avatar.owner { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+  .member-main { flex: 1; min-width: 180px; }
+  .member-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .member-name-input {
-    font-size: 15px; font-weight: 700; background: transparent; border: none; border-bottom: 1px solid transparent;
-    color: var(--text); padding: 2px 0; font-family: var(--font-body); outline: none; width: 100%;
+    font-size: 15.5px; font-weight: 700; background: transparent; border: none; border-bottom: 1px solid transparent;
+    color: var(--text); padding: 2px 0; font-family: var(--font-body); outline: none; min-width: 60px; max-width: 220px;
   }
   .member-name-input:hover, .member-name-input:focus { border-bottom-color: var(--border); }
+  .owner-crown { font-size: 13px; }
   .member-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-  .you-badge { margin-left: 8px; }
+
+  .member-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .member-role { min-width: 140px; padding: 9px 12px; font-size: 13px; }
+
+  @media (max-width: 640px) {
+    .member-card { flex-direction: column; align-items: stretch; }
+    .member-actions { justify-content: space-between; }
+    .member-role { flex: 1; }
+  }
 
   .confirm-box { background: var(--danger-soft); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 16px; margin: 14px 0 0; }
   .confirm-box p { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
@@ -57,9 +99,12 @@
           </div>
 
           <div class="card code-card">
-            <div>
-              <div class="code-label">Join code — share this with teammates</div>
-              <div class="code-value" id="joinCodeValue">——————</div>
+            <div class="code-card-label">
+              <div class="code-icon" aria-hidden="true">🔑</div>
+              <div>
+                <div class="code-label">Join code — share this with teammates</div>
+                <div class="code-value" id="joinCodeValue">——————</div>
+              </div>
             </div>
             <div class="code-actions">
               <button type="button" class="btn btn-outline btn-sm" id="copyCodeBtn">Copy Code</button>
@@ -75,6 +120,10 @@
           </div>
 
           <h2 class="section-label" id="membersHeading">Members</h2>
+          <div class="owner-note">
+            <span class="icon" aria-hidden="true">👑</span>
+            <span>Every team needs exactly one Owner. To leave the team (or remove them) as the only Owner, make someone else Owner first — set their role to "Owner" below.</span>
+          </div>
           <div id="membersList"></div>
         </div>
       </main>
@@ -85,9 +134,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where
+      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, resolveTeamId, generateJoinCode } from "./assets/app.js?v=8";
+    import {
+      firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip,
+      resolveTeamId, generateJoinCode, getTeamMembers, countOwners
+    } from "./assets/app.js?v=9";
 
     document.getElementById('navRoot').innerHTML = renderNav('roster');
 
@@ -101,6 +153,7 @@
     let currentTeamId = null;
     let currentUid = null;
     let joinCode = '';
+    let currentMembers = [];
 
     const loadingState = document.getElementById('loadingState');
     const errorState = document.getElementById('errorState');
@@ -157,20 +210,18 @@
     async function loadMembers() {
       membersList.innerHTML = '<div class="entries-empty">Loading members…</div>';
       try {
-        const membersQuery = query(collection(db, 'members'), where('teamId', '==', currentTeamId));
-        const snap = await getDocs(membersQuery);
-        const members = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-        members.sort((a, b) => (a.joinedAt || '').localeCompare(b.joinedAt || ''));
+        currentMembers = await getTeamMembers(db, currentTeamId);
+        currentMembers.sort((a, b) => (a.joinedAt || '').localeCompare(b.joinedAt || ''));
 
-        membersHeading.textContent = `Members (${members.length})`;
+        membersHeading.textContent = `Members (${currentMembers.length})`;
 
-        if (members.length === 0) {
+        if (currentMembers.length === 0) {
           membersList.innerHTML = '<div class="entries-empty">No members found.</div>';
           return;
         }
 
         membersList.innerHTML = '';
-        members.forEach(m => membersList.appendChild(renderMemberCard(m)));
+        currentMembers.forEach(m => membersList.appendChild(renderMemberCard(m)));
 
       } catch (err) {
         console.error(err);
@@ -178,25 +229,32 @@
       }
     }
 
+    function initials(name) {
+      return (name || 'M').trim().slice(0, 1).toUpperCase();
+    }
+
     function renderMemberCard(m) {
       const isYou = m.uid === currentUid;
+      const isOwner = m.role === 'Owner';
       const joined = m.joinedAt ? new Date(m.joinedAt).toLocaleDateString('en-AU') : 'Unknown date';
 
       const card = document.createElement('div');
-      card.className = 'entry-card';
+      card.className = 'member-card' + (isYou ? ' is-you' : '');
       card.innerHTML = `
-        <div class="entry-head">
-          <div style="flex:1; min-width:0;">
+        <div class="member-avatar${isOwner ? ' owner' : ''}" aria-hidden="true">${escapeHtml(initials(m.displayName))}</div>
+        <div class="member-main">
+          <div class="member-name-row">
             <input type="text" class="member-name-input" value="${escapeHtml(m.displayName || 'Member')}" aria-label="Name" data-uid="${m.uid}">
-            ${isYou ? '<span class="badge accent you-badge">You</span>' : ''}
-            <div class="member-meta">Joined ${joined}</div>
+            ${isOwner ? '<span class="owner-crown" title="Owner">👑</span>' : ''}
+            ${isYou ? '<span class="badge accent">You</span>' : ''}
           </div>
-          <div class="entry-actions">
-            <select class="member-role" aria-label="Role" data-uid="${m.uid}">
-              ${ROLE_OPTIONS.map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${r}</option>`).join('')}
-            </select>
-            <button type="button" class="btn btn-danger btn-sm" data-action="remove" data-uid="${m.uid}">Remove</button>
-          </div>
+          <div class="member-meta">Joined ${joined}</div>
+        </div>
+        <div class="member-actions">
+          <select class="member-role" aria-label="Role" data-uid="${m.uid}">
+            ${ROLE_OPTIONS.map(r => `<option value="${r}" ${m.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+          </select>
+          <button type="button" class="btn btn-danger btn-sm" data-action="remove" data-uid="${m.uid}">Remove</button>
         </div>
       `;
 
@@ -204,8 +262,8 @@
       card.querySelector('.member-name-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') e.target.blur();
       });
-      card.querySelector('.member-role').addEventListener('change', (e) => saveRole(m.uid, e.target.value));
-      card.querySelector('[data-action="remove"]').addEventListener('click', () => removeMember(m.uid, m.displayName || 'this member', isYou));
+      card.querySelector('.member-role').addEventListener('change', (e) => saveRole(m, e.target));
+      card.querySelector('[data-action="remove"]').addEventListener('click', () => removeMember(m, isYou));
 
       return card;
     }
@@ -215,6 +273,8 @@
       if (!name) return;
       try {
         await updateDoc(doc(db, 'members', uid), { displayName: name });
+        const m = currentMembers.find(x => x.uid === uid);
+        if (m) m.displayName = name;
         toast('Name updated.', 'success');
       } catch (err) {
         console.error(err);
@@ -222,24 +282,49 @@
       }
     }
 
-    async function saveRole(uid, role) {
+    async function saveRole(member, selectEl) {
+      const newRole = selectEl.value;
+
+      // Every team must always keep at least one Owner — block demoting
+      // the last one until someone else has been made Owner instead.
+      if (member.role === 'Owner' && newRole !== 'Owner' && countOwners(currentMembers) <= 1) {
+        toast('This is the only Owner on the team — make someone else Owner first.', 'error');
+        selectEl.value = 'Owner';
+        return;
+      }
+
       try {
-        await updateDoc(doc(db, 'members', uid), { role });
+        await updateDoc(doc(db, 'members', member.uid), { role: newRole });
+        member.role = newRole;
         toast('Role updated.', 'success');
+        await loadMembers();
       } catch (err) {
         console.error(err);
         toast("Couldn't update role.", 'error');
+        selectEl.value = member.role;
       }
     }
 
-    async function removeMember(uid, name, isYou) {
+    async function removeMember(member, isYou) {
+      const name = member.displayName || 'this member';
+
+      if (member.role === 'Owner' && countOwners(currentMembers) <= 1) {
+        toast(
+          isYou
+            ? "You're the only Owner on this team — make someone else Owner first, then you can leave."
+            : `${name} is the only Owner on this team — make someone else Owner first.`,
+          'error'
+        );
+        return;
+      }
+
       const warning = isYou
         ? `Remove yourself from the team? Your login stays active, but you'll start a fresh, empty team next time you sign in. This can't be undone.`
         : `Remove ${name} from the team? Their login stays active, but they'll start a fresh, empty team next time they sign in. This can't be undone.`;
       if (!confirm(warning)) return;
 
       try {
-        await deleteDoc(doc(db, 'members', uid));
+        await deleteDoc(doc(db, 'members', member.uid));
         if (isYou) {
           // Sign out immediately — otherwise the Firebase session stays
           // active and the next page load would silently self-heal a new,
