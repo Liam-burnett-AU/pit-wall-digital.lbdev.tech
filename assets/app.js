@@ -9,7 +9,7 @@
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Bump this on every deployed change — shown on the Settings page.
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.4.0";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDxEHi2ug0DvkzPR06EKdXYtJ69KSGUmus",
@@ -295,6 +295,7 @@ const NAV_ITEMS = [
   { key: 'notebook', href: 'engineering-notebook.html', icon: '📓', label: 'Notebook' },
   { key: 'roster', href: 'roster.html', icon: '👥', label: 'Roster' },
   { key: 'checklist', href: 'pit-checklist.html', icon: '✅', label: 'Checklist' },
+  { key: 'help', href: 'help.html', icon: '❓', label: 'Help' },
   { key: 'settings', href: 'settings.html', icon: '⚙️', label: 'Settings' }
 ];
 

@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Settings</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   h1.page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 30px; }
   .settings-section { margin-bottom: 20px; }
   .settings-section.danger { border-color: var(--danger-border); }
   .settings-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
   .settings-section h2.danger-title { color: var(--danger-text); }
-  .settings-section .section-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
-  .current-value { font-family: var(--font-mono); font-size: 13.5px; margin-bottom: 16px; }
+  .settings-section .section-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; }
+  .current-value { font-family: var(--font-mono); font-size: 14px; margin-bottom: 16px; }
   .current-value span { color: var(--text-muted); }
   .confirm-box { background: var(--danger-soft); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 16px; margin-top: 14px; }
-  .confirm-box p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+  .confirm-box p { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
   .confirm-actions { display: flex; gap: 10px; }
 </style>
 </head>
@@ -50,6 +50,11 @@
             <h2>Account</h2>
             <p class="section-desc">Change your email or password. Both send a link to your inbox — nothing changes until you click it.</p>
             <div class="current-value">Current email: <span id="currentEmail">—</span></div>
+            <div id="verifyBlock" class="hidden" style="margin-bottom:16px;">
+              <span class="badge danger">Email not verified</span>
+              <button type="button" class="btn btn-outline btn-sm" id="resendVerifyBtn" style="margin-left:8px;">Resend Verification Email</button>
+              <div class="status-msg" id="verifyStatus"></div>
+            </div>
 
             <div class="field">
               <label for="newEmail">New email</label>
@@ -145,7 +150,7 @@
             <div class="status-msg" id="deleteAccountStatus"></div>
           </div>
 
-          <p class="mono faint" style="text-align:center; font-size:11.5px; margin-top:8px;" id="versionLine">Pit Wall</p>
+          <p class="mono faint" style="text-align:center; font-size:12px; margin-top:8px;" id="versionLine">Pit Wall</p>
 
         </div>
       </main>
@@ -156,10 +161,10 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import {
       getAuth, onAuthStateChanged, sendPasswordResetEmail, verifyBeforeUpdateEmail,
-      reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut
+      reauthenticateWithCredential, EmailAuthProvider, deleteUser, signOut, sendEmailVerification
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION, resolveTeamId } from "./assets/app.js?v=7";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, wireTeamLookup, APP_VERSION, resolveTeamId } from "./assets/app.js?v=8";
 
     document.getElementById('versionLine').textContent = `Pit Wall v${APP_VERSION}`;
 
@@ -210,6 +215,7 @@
 
         setTeamChip(team);
         document.getElementById('currentEmail').textContent = user.email || '—';
+        document.getElementById('verifyBlock').classList.toggle('hidden', user.emailVerified);
         document.getElementById('teamName').value = team.teamName || '';
         document.getElementById('teamNumber').value = team.teamNumber || '';
         document.getElementById('teamCompetition').value = team.competition || 'FTC';
@@ -373,6 +379,22 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Send Password Reset Email';
+      }
+    });
+
+    document.getElementById('resendVerifyBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('resendVerifyBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        await sendEmailVerification(currentUser);
+        setStatus('verifyStatus', `Verification link sent to ${currentUser.email}. Check your inbox.`, 'success');
+      } catch (err) {
+        console.error(err);
+        setStatus('verifyStatus', friendlyAuthError(err), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Resend Verification Email';
       }
     });
 

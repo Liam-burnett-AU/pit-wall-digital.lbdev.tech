@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Team Roster</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   .code-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
   .code-value { font-family: var(--font-mono); font-size: 30px; font-weight: 700; letter-spacing: 5px; color: var(--accent-text); }
-  .code-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .code-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
   .code-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
   .member-role { min-width: 140px; }
@@ -18,11 +18,11 @@
     color: var(--text); padding: 2px 0; font-family: var(--font-body); outline: none; width: 100%;
   }
   .member-name-input:hover, .member-name-input:focus { border-bottom-color: var(--border); }
-  .member-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+  .member-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 4px; }
   .you-badge { margin-left: 8px; }
 
   .confirm-box { background: var(--danger-soft); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); padding: 16px; margin: 14px 0 0; }
-  .confirm-box p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+  .confirm-box p { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
   .confirm-actions { display: flex; gap: 10px; }
 </style>
 </head>
@@ -87,7 +87,7 @@
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where
     } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, resolveTeamId, generateJoinCode } from "./assets/app.js?v=7";
+    import { firebaseConfig, escapeHtml, toast, renderNav, wireNav, setTeamChip, resolveTeamId, generateJoinCode } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('roster');
 
@@ -240,11 +240,16 @@
 
       try {
         await deleteDoc(doc(db, 'members', uid));
-        toast('Member removed.', 'success');
         if (isYou) {
+          // Sign out immediately — otherwise the Firebase session stays
+          // active and the next page load would silently self-heal a new,
+          // separate team for this account via resolveTeamId(), which
+          // looked like "removing yourself doesn't actually remove you."
+          await signOut(auth);
           window.location.href = 'index.html';
           return;
         }
+        toast('Member removed.', 'success');
         await loadMembers();
       } catch (err) {
         console.error(err);

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>Pit Wall — Help</title>
+<link rel="stylesheet" href="assets/style.css?v=8">
+<style>
+  .help-section { margin-bottom: 20px; }
+  .help-section p { font-size: 14.5px; line-height: 1.65; color: var(--text-muted); }
+  .help-section p + p { margin-top: 10px; }
+
+  .steps { counter-reset: step; margin-top: 4px; }
+  .step {
+    display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step .num {
+    counter-increment: step; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); border: 1px solid var(--accent-border); color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 12.5px; font-weight: 700;
+  }
+  .step .num::before { content: counter(step); }
+  .step .body h3 { font-size: 14.5px; font-weight: 700; margin-bottom: 3px; }
+  .step .body p { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; }
+  .step .body a { font-size: 12.5px; }
+
+  .glossary-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .glossary-item:last-child { border-bottom: none; }
+  .glossary-item dt { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; color: var(--accent-text); margin-bottom: 4px; }
+  .glossary-item dd { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; }
+
+  .faq-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-item .q { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
+  .faq-item .a { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+  <div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+  <div class="app-shell">
+    <div id="navRoot"></div>
+
+    <div class="app-main">
+      <main class="page narrow" id="mainContent" tabindex="-1">
+        <div class="page-head">
+          <div>
+            <h1>Help &amp; Getting Started</h1>
+            <p>New to FTC, or just new to Pit Wall? Start here.</p>
+          </div>
+        </div>
+
+        <div class="help-section card">
+          <h2>What is this app for?</h2>
+          <p>Pit Wall is a hub for an <strong>FIRST Tech Challenge (FTC)</strong> robotics team — a hands-on high school robotics competition where teams design, build, and program a robot to complete tasks against other teams at events. This app is where your team keeps track of your robot, scouts opponents, checks your schedule, and gets AI help — all in one place, shared across everyone on the team.</p>
+          <p>You don't need to know FTC jargon to use it — the glossary below covers the terms you'll see around the app.</p>
+        </div>
+
+        <div class="help-section card">
+          <h2>Getting started</h2>
+          <div class="steps">
+            <div class="step">
+              <span class="num" aria-hidden="true"></span>
+              <div class="body">
+                <h3>Create or join your team</h3>
+                <p>If you're the first person from your team here, sign up and create the team (you'll get a join code to share). Otherwise, ask a teammate for their team's join code and use "Join Team" on the login page instead — everyone shares the same team data under their own login.</p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num" aria-hidden="true"></span>
+              <div class="body">
+                <h3>Fill in your Robot Profile</h3>
+                <p>Log your drivetrain, how your robot scores, and what it does in autonomous. This is the single most useful thing to fill in — the AI Chat and Events analysis both use it to give advice specific to your robot instead of generic tips.</p>
+                <a href="robot-profile.html">Go to Robot Profile →</a>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num" aria-hidden="true"></span>
+              <div class="body">
+                <h3>Scout opponents at events</h3>
+                <p>Log what you notice about other teams — their drivetrain, how well they score, driver skill. This builds a reference you (and the AI) can use later when picking alliance partners or planning a match.</p>
+                <a href="scouting.html">Go to Scouting →</a>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num" aria-hidden="true"></span>
+              <div class="body">
+                <h3>Check your Schedule and Events</h3>
+                <p>Schedule shows your upcoming matches, pulled straight from FIRST's official system. Events shows past results, your win/loss record, and AI-generated feedback on what to work on.</p>
+                <a href="schedule.html">Go to Schedule →</a> &nbsp;·&nbsp; <a href="events.html">Go to Events →</a>
+              </div>
+            </div>
+            <div class="step">
+              <span class="num" aria-hidden="true"></span>
+              <div class="body">
+                <h3>Ask the AI Chat anything</h3>
+                <p>Once your Robot Profile and scouting log have some data in them, ask AI Chat things like "how should we improve our autonomous?" or "what should we watch out for against team 12345?" — it knows your team's own data.</p>
+                <a href="chat.html">Go to AI Chat →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-section card">
+          <h2>Glossary</h2>
+          <dl>
+            <div class="glossary-item">
+              <dt>FTC (FIRST Tech Challenge)</dt>
+              <dd>The robotics competition this app is built for. Teams of students design, build, and program a robot each season to play a game against other teams.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Drivetrain</dt>
+              <dd>The system of wheels/motors that lets the robot move — e.g. "mecanum" (can strafe sideways), "tank" (turns by driving each side at different speeds).</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Autonomous ("Auto")</dt>
+              <dd>The first ~30 seconds of a match, where the robot runs on pre-programmed instructions with no driver control.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Alliance</dt>
+              <dd>Two teams paired together (Red alliance vs Blue alliance) for a match. Alliance partners usually change from match to match during qualifications.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Qualification / Playoff matches</dt>
+              <dd>Qualification ("qual") matches decide overall rankings at an event with randomly assigned alliance partners; playoff matches are the elimination bracket afterward with alliances chosen by the top-ranked teams.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Scouting</dt>
+              <dd>Watching and taking notes on other teams' robots at an event, so you know their strengths/weaknesses before playing with or against them.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>OPR / DPR / CCWM</dt>
+              <dd>Statistics FTCScout calculates from match scores to estimate a team's offensive contribution (OPR), defensive/opponent-suppression contribution (DPR), and net contribution (CCWM). Shown in team profile popups on the Events page.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Engineering Notebook</dt>
+              <dd>A running log of your team's design decisions and build process — judges use it to understand how (and why) you built what you built. Pit Wall can turn your logged entries into a full write-up automatically.</dd>
+            </div>
+            <div class="glossary-item">
+              <dt>Pit Checklist</dt>
+              <dd>Your pre-competition packing/setup list, so nothing gets left behind on competition day.</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="help-section card">
+          <h2>Common questions</h2>
+          <div class="faq-item">
+            <div class="q">I removed myself from the team roster — how do I get back in?</div>
+            <div class="a">You're signed out immediately when you remove yourself. To rejoin your old team, log back in and use "Join Team" with your team's join code (find it on another teammate's Roster page). Logging in without a code just starts you a new, separate, empty team.</div>
+          </div>
+          <div class="faq-item">
+            <div class="q">Why can't I see any events?</div>
+            <div class="a">Events only show up once your team is officially registered for them in FIRST's system — Pit Wall pulls this live, it can't show events FIRST doesn't know about yet. Make sure your team number is set correctly in Settings.</div>
+          </div>
+          <div class="faq-item">
+            <div class="q">Do I need to fill in every field before I can use the app?</div>
+            <div class="a">No — everything is optional except your team number. But the more you fill in on your Robot Profile, the more specific and useful the AI's answers will be.</div>
+          </div>
+          <div class="faq-item">
+            <div class="q">Is my data shared with other teams?</div>
+            <div class="a">No — only people who've joined your team (via your join code) can see your team's data. See Settings for account/data details.</div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+    import { firebaseConfig, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=8";
+
+    document.getElementById('navRoot').innerHTML = renderNav('help');
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    wireNav(auth, signOut);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      try {
+        const teamId = await resolveTeamId(db, user);
+        const teamSnap = await getDoc(doc(db, 'teams', teamId));
+        if (teamSnap.exists()) setTeamChip(teamSnap.data());
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  </script>
+
+</body>
+</html>

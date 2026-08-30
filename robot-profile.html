@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Robot Profile</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   form { display: flex; flex-direction: column; gap: 22px; }
   .actions { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
-  .last-updated { margin-top: 6px; font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); }
+  .last-updated { margin-top: 6px; font-size: 12.5px; color: var(--text-faint); font-family: var(--font-mono); }
 </style>
 </head>
 <body>
@@ -44,6 +44,7 @@
           </div>
 
           <form class="card" id="robotForm" onsubmit="return false;">
+            <div class="modal-subhead" style="margin-top:0;">Drivetrain &amp; Scoring</div>
             <div class="field">
               <label for="drivetrain">Drivetrain</label>
               <input type="text" id="drivetrain" placeholder="e.g. Mecanum, tank, swerve...">
@@ -54,11 +55,13 @@
               <textarea id="gamePieceMechanism" placeholder="Describe how your robot picks up, holds, and scores game pieces..."></textarea>
             </div>
 
+            <div class="modal-subhead">Autonomous</div>
             <div class="field">
               <label for="autonomousRoutine">Autonomous routine</label>
               <textarea id="autonomousRoutine" placeholder="What does your robot do during the autonomous period?"></textarea>
             </div>
 
+            <div class="modal-subhead">Notes</div>
             <div class="field">
               <label for="notes">Additional notes</label>
               <textarea id="notes" placeholder="Anything else worth knowing — known issues, upcoming changes, strategy notes..."></textarea>
@@ -80,7 +83,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=7";
+    import { firebaseConfig, toast, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('robot');
 

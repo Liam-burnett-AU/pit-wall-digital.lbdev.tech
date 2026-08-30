@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Engineering Notebook</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   .form-card { margin-bottom: 32px; }
   .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
@@ -22,17 +22,17 @@
   .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
 
   .upload-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .upload-row input[type="file"] { color: var(--text-muted); font-size: 13px; max-width: 100%; }
+  .upload-row input[type="file"] { color: var(--text-muted); font-size: 13.5px; max-width: 100%; }
   .upload-row input[type="file"]::file-selector-button {
     background: transparent; border: 1px solid var(--border); color: var(--text-muted);
-    padding: 8px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px;
+    padding: 8px 14px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13.5px;
     cursor: pointer; margin-right: 12px; transition: border-color 0.15s ease, color 0.15s ease;
   }
   .upload-row input[type="file"]::file-selector-button:hover { border-color: var(--accent-text); color: var(--accent-text); }
 
-  .upload-section p.section-desc { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+  .upload-section p.section-desc { color: var(--text-muted); font-size: 13.5px; line-height: 1.5; margin-bottom: 16px; }
   .final-doc-wrap { margin-top: 20px; }
-  .final-doc-card .filename { font-family: var(--font-mono); font-size: 13px; color: var(--accent-text); margin-bottom: 10px; }
+  .final-doc-card .filename { font-family: var(--font-mono); font-size: 13.5px; color: var(--accent-text); margin-bottom: 10px; }
 
   .thumb-btn { width: 100%; border: none; padding: 0; cursor: pointer; display: block; background: none; }
   .thumb-btn img { width: 100%; height: 150px; object-fit: cover; display: block; }
@@ -167,7 +167,7 @@
     import {
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
       callGroq, uploadToCloudinary, VISION_MODEL, openModal, closeModal, resolveTeamId
-    } from "./assets/app.js?v=7";
+    } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('notebook');
 
@@ -495,7 +495,7 @@
           card.innerHTML = `
             <button type="button" class="thumb-btn" data-action="open" aria-label="Open ${escapeHtml(p.filename)}"><img src="${p.url}" alt="Notebook page photo: ${escapeHtml(p.filename)}"></button>
             <div class="photo-card-body">
-              <div class="mono" style="font-size:11px; color:var(--text-muted); word-break:break-all;">${escapeHtml(p.filename)}${p.aiFeedback ? ' · feedback ready' : ''}</div>
+              <div class="mono" style="font-size:11.5px; color:var(--text-muted); word-break:break-all;">${escapeHtml(p.filename)}${p.aiFeedback ? ' · feedback ready' : ''}</div>
               <div class="photo-actions">
                 <button type="button" class="btn btn-outline btn-sm" data-action="open">${p.aiFeedback ? 'View Feedback' : 'Get AI Feedback'}</button>
                 <button type="button" class="btn btn-outline btn-sm" data-action="delete">Remove</button>
@@ -767,7 +767,7 @@ Don't invent information that isn't in the data. If very little data is availabl
       card.innerHTML = `
         <div class="card">
           <div class="md">${renderMarkdown(data.content)}</div>
-          ${when ? `<div class="generated-at" style="margin-top:14px; font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint);">Generated ${when}</div>` : ''}
+          ${when ? `<div class="generated-at" style="margin-top:14px; font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint);">Generated ${when}</div>` : ''}
         </div>
       `;
       lastGeneratedNotebook = data.content;

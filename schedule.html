@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Schedule</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   .event-select-card { margin-bottom: 24px; }
   .event-select-card .level-toggle { margin-top: 14px; }
@@ -16,13 +16,13 @@
     display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   }
   .match-card.our-match { border-color: var(--accent-border); background: var(--accent-soft); }
-  .match-num { font-family: var(--font-mono); font-size: 13px; color: var(--text-muted); min-width: 70px; }
-  .match-time { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); min-width: 90px; }
+  .match-num { font-family: var(--font-mono); font-size: 13.5px; color: var(--text-muted); min-width: 70px; }
+  .match-time { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-muted); min-width: 90px; }
   .alliance-block { display: flex; gap: 18px; flex: 1; flex-wrap: wrap; }
-  .alliance { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-  .alliance-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; }
-  .alliance-label.red { background: rgba(255,90,90,0.15); color: #ff8f8f; }
-  .alliance-label.blue { background: rgba(90,150,255,0.15); color: #8fbaff; }
+  .alliance { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .alliance-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
+  .alliance-label.red { background: var(--danger-soft); color: var(--danger-text); border-color: var(--danger-border); }
+  .alliance-label.blue { background: var(--info-soft); color: var(--info-text); border-color: var(--info-border); }
   .team-tag { font-family: var(--font-mono); }
   .team-tag.mine { color: var(--accent-text); font-weight: 700; }
 </style>
@@ -78,7 +78,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, ftcEventsFetch, FTC_EVENTS_SEASON, resolveTeamId } from "./assets/app.js?v=7";
+    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, ftcEventsFetch, FTC_EVENTS_SEASON, resolveTeamId } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('schedule');
 

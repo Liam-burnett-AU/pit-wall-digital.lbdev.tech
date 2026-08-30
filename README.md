@@ -7,8 +7,9 @@ Live at **[pit-wall-digital.lbdev.tech](https://pit-wall-digital.lbdev.tech)**.
 ## Features
 
 - **Light/dark theme** — follows your system setting by default; toggle it from the sidebar (or the login page) and it's remembered from then on.
-- **Team accounts** — create a team (Firebase Auth + team number/name looked up live from [FTCScout](https://ftcscout.org) as you type), or join an existing one with a join code from a teammate. Everyone on a team shares the same data — robot profile, scouting log, chat, notebook, checklist — under their own individual login.
+- **Team accounts** — create a team (Firebase Auth + team number/name looked up live from [FTCScout](https://ftcscout.org) as you type), or join an existing one with a join code from a teammate. Everyone on a team shares the same data — robot profile, scouting log, chat, notebook, checklist — under their own individual login. A verification link is emailed on signup (Settings shows a reminder banner and a resend button until you click it).
 - **Team Roster** — see everyone signed into your team, share/regenerate the join code, and set each person's name and role (roles are descriptive only — anyone on the team can edit or remove anyone else, there's no enforced hierarchy).
+- **Help** — a plain-English explainer of what FTC is, an onboarding walkthrough, a glossary of terms used around the app, and answers to common questions — for anyone using Pit Wall without an FTC background.
 - **Dashboard** — quick links and a snapshot of your robot profile.
 - **Robot profile** — log your drivetrain, game piece mechanism, and autonomous routine; this feeds the AI chat and event analysis.
 - **Scouting** — log opponent teams you see at events (drivetrain, scoring capability, driver skill, notes), with a driver-skill chart and CSV export.
@@ -44,6 +45,7 @@ events.html                   Past/upcoming events, results, AI analysis
 chat.html                    AI chat
 engineering-notebook.html   Notebook entries, photos, final doc review
 roster.html                   Team roster — members, roles, join code
+help.html                      Onboarding, glossary, FAQ
 pit-checklist.html          Pit checklist
 settings.html                 Account/team settings
 assets/style.css              Shared design system (tokens, layout, components)

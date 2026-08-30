@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Events</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   .event-card { margin-bottom: 14px; }
   .event-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
   .event-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .event-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
-  .event-venue { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .event-meta { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-muted); }
+  .event-venue { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
   .record-strip {
     display: flex; gap: 22px; margin-top: 14px; padding-top: 14px;
@@ -25,7 +25,7 @@
   .past-view-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin: 20px 0 16px; }
 
   .analysis-actions { margin-top: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .analysis-hint { font-size: 12px; color: var(--text-muted); }
+  .analysis-hint { font-size: 12.5px; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -117,7 +117,7 @@
       firebaseConfig, escapeHtml, toast, renderMarkdown, renderNav, wireNav, setTeamChip,
       ftcEventsFetch, fetchTeamEventsAcrossSeasons, ftcScoutFetch, renderKeyValueList, callGroq,
       openModal, closeModal, resolveTeamId
-    } from "./assets/app.js?v=7";
+    } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('events');
 
@@ -475,9 +475,9 @@
       const ourScore = ourColour === 'red' ? m.scoreRedFinal : m.scoreBlueFinal;
       const oppScore = ourColour === 'red' ? m.scoreBlueFinal : m.scoreRedFinal;
 
-      if (ourScore > oppScore) return '<span class="badge success badge-inline">Win</span>';
-      if (ourScore < oppScore) return '<span class="badge danger badge-inline">Loss</span>';
-      return '<span class="badge badge-inline">Tie</span>';
+      if (ourScore > oppScore) return '<span class="badge success badge-inline">✓ Win</span>';
+      if (ourScore < oppScore) return '<span class="badge danger badge-inline">✕ Loss</span>';
+      return '<span class="badge badge-inline">– Tie</span>';
     }
 
     function matchRowHtml(m, idx) {
@@ -566,7 +566,7 @@
         ${renderKeyValueList(match, { skip: ['teams'] })}
 
         <div class="modal-subhead">Team Season Stats (FTCScout API)</div>
-        <div id="modalScoutStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
+        <div id="modalScoutStats"><p class="faint" style="font-size:13.5px;">Loading...</p></div>
       `;
       openModal('modalOverlay', triggerEl);
 
@@ -587,11 +587,11 @@
 
         scoutEl.innerHTML = stats.map(s => `
           <div class="modal-subhead" style="margin-top:14px;">#${escapeHtml(s.number)}</div>
-          ${s.stats ? renderKeyValueList(s.stats) : '<p class="faint" style="font-size:13px;">No FTCScout stats available for this team/season.</p>'}
+          ${s.stats ? renderKeyValueList(s.stats) : '<p class="faint" style="font-size:13.5px;">No FTCScout stats available for this team/season.</p>'}
         `).join('');
       } catch (err) {
         console.error('FTCScout match stats error:', err);
-        scoutEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout stats.</p>';
+        scoutEl.innerHTML = '<p class="faint" style="font-size:13.5px;">Couldn\'t load FTCScout stats.</p>';
       }
     }
 
@@ -737,10 +737,10 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
         ` : ''}
 
         <div class="modal-subhead">Team Profile (FTCScout API)</div>
-        <div id="modalScoutProfile"><p class="faint" style="font-size:13px;">Loading...</p></div>
+        <div id="modalScoutProfile"><p class="faint" style="font-size:13.5px;">Loading...</p></div>
 
         <div class="modal-subhead">Season Quick Stats (FTCScout API)</div>
-        <div id="modalScoutQuickStats"><p class="faint" style="font-size:13px;">Loading...</p></div>
+        <div id="modalScoutQuickStats"><p class="faint" style="font-size:13.5px;">Loading...</p></div>
       `;
       openModal('modalOverlay', triggerEl);
 
@@ -749,18 +749,18 @@ Be specific and reference the actual scores and team numbers given. Keep it conc
 
       try {
         const profile = await ftcScoutFetch(`/teams/${team.teamNumber}`);
-        profileEl.innerHTML = profile ? renderKeyValueList(profile) : '<p class="faint" style="font-size:13px;">No FTCScout profile found for this team.</p>';
+        profileEl.innerHTML = profile ? renderKeyValueList(profile) : '<p class="faint" style="font-size:13.5px;">No FTCScout profile found for this team.</p>';
       } catch (err) {
         console.error('FTCScout profile error:', err);
-        profileEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout profile.</p>';
+        profileEl.innerHTML = '<p class="faint" style="font-size:13.5px;">Couldn\'t load FTCScout profile.</p>';
       }
 
       try {
         const stats = await ftcScoutFetch(`/teams/${team.teamNumber}/quick-stats?season=${event._season}`);
-        statsEl.innerHTML = stats ? renderKeyValueList(stats) : '<p class="faint" style="font-size:13px;">No stats available for this season.</p>';
+        statsEl.innerHTML = stats ? renderKeyValueList(stats) : '<p class="faint" style="font-size:13.5px;">No stats available for this season.</p>';
       } catch (err) {
         console.error('FTCScout quick-stats error:', err);
-        statsEl.innerHTML = '<p class="faint" style="font-size:13px;">Couldn\'t load FTCScout stats.</p>';
+        statsEl.innerHTML = '<p class="faint" style="font-size:13.5px;">Couldn\'t load FTCScout stats.</p>';
       }
     }
 

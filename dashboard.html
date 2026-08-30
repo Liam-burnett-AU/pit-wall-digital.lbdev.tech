@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>(function(){try{var t=localStorage.getItem('pitwall-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>Pit Wall — Dashboard</title>
-<link rel="stylesheet" href="assets/style.css?v=7">
+<link rel="stylesheet" href="assets/style.css?v=8">
 <style>
   .welcome-block { margin-bottom: 34px; }
   .welcome-block h1 { font-size: clamp(26px, 3.2vw, 34px); font-weight: 700; letter-spacing: -0.5px; }
@@ -110,7 +110,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=7";
+    import { firebaseConfig, escapeHtml, renderNav, wireNav, setTeamChip, resolveTeamId } from "./assets/app.js?v=8";
 
     document.getElementById('navRoot').innerHTML = renderNav('dashboard');
 
