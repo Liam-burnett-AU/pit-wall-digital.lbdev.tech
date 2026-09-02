@@ -499,24 +499,31 @@ main.page.narrow { max-width: 680px; }
 .field input:disabled,
 .field select:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.field .hint { font-size: 12.5px; color: var(--text-faint); margin-top: 7px; }
+.field .hint { font-size: 13px; color: var(--text-faint); margin-top: 7px; }
+.field label .optional { text-transform: none; font-weight: 400; color: var(--text-faint); letter-spacing: normal; }
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
 
 .status-msg {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: 13.5px;
   font-family: var(--font-mono);
   display: none;
 }
-.status-msg.success { display: block; color: var(--accent-text); }
+/* Success used the yellow accent color (the same hue as buttons/borders
+   everywhere else on the page), so a "saved" message didn't read as a
+   distinct positive signal — green plus a checkmark makes it unambiguous
+   and doesn't rely on color alone. */
+.status-msg.success { display: block; color: var(--success-text); }
 .status-msg.error { display: block; color: var(--danger-text); }
+.status-msg.success::before { content: "✓ "; }
+.status-msg.error::before { content: "✕ "; }
 
 /* lookup dropdown (team search) */
-.lookup-status { margin-top: 7px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); min-height: 14px; }
+.lookup-status { margin-top: 7px; font-family: var(--font-mono); font-size: 12.5px; color: var(--text-muted); min-height: 14px; }
 .lookup-status.error { color: var(--danger-text); }
-.lookup-status.success { color: var(--accent-text); }
+.lookup-status.success { color: var(--success-text); }
 
 .results-dropdown {
   position: absolute;
@@ -614,6 +621,11 @@ main.page.narrow { max-width: 680px; }
   gap: 14px;
   margin-top: 12px;
 }
+/* Grid items default to min-width:auto, so a long unbroken token (a URL, a
+   long word with no spaces) in .info-value below could refuse to shrink
+   and force the whole page to scroll horizontally — this lets the cell
+   shrink to its track width instead. */
+.entry-grid > div { min-width: 0; }
 .info-label {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -623,7 +635,7 @@ main.page.narrow { max-width: 680px; }
   display: block;
   margin-bottom: 3px;
 }
-.info-value { font-size: 14px; color: var(--text); white-space: pre-wrap; }
+.info-value { font-size: 14px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
 .info-value.accent { color: var(--accent-text); }
 
 .entries-empty {
@@ -818,7 +830,7 @@ main.page.narrow { max-width: 680px; }
 .toast {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 16px;
   font-size: 13.5px;
@@ -832,7 +844,14 @@ main.page.narrow { max-width: 680px; }
   pointer-events: auto;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
+/* Success previously reused the yellow accent color, which reads as
+   neutral/warning next to all the other yellow-accented chrome on the
+   page rather than a clear "it worked" signal — green + a checkmark
+   fixes that without relying on color alone. */
+.toast.toast-success { border-left-color: var(--success-text); }
+.toast.toast-success::before { content: "✓ "; color: var(--success-text); font-weight: 700; }
 .toast.toast-error { border-left-color: var(--danger-text); }
+.toast.toast-error::before { content: "✕ "; color: var(--danger-text); font-weight: 700; }
 
 /* ===== Misc utility ===== */
 
